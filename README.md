@@ -1,3 +1,3 @@
 # dance-sync-analysis
-- input: 2 videos of dancers
+- input: videos of 2 dancers
 - output: sync score
