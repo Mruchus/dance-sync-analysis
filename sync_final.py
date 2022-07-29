@@ -114,7 +114,7 @@ def difference(dl1, dl2, s1, s2, r1, r2):
         if shot_dif > 10:
             cv2.putText(comp, "!", (frame_width, frame_height // 2 ), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,0,0), 3)
             # we are going to deduct some points of the moves are significantly different
-            deduction += 200
+            deduction += 150
         cv2.imshow(str(f), comp)
         cv2.waitKey(1)
         if shot_dif > 10:
