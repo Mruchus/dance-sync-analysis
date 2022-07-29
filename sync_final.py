@@ -68,7 +68,7 @@ def difference(dl1, dl2, s1, s2, r1, r2):
     # all the joints we are using
     connections = [(16, 14), (14, 12), (12, 11), (11, 13), (13, 15), (12, 24), (11, 23), (24, 23), (24, 26), (23, 25), (26, 28), (25, 27)]
     deduction = 0
-    deduction_score = 0
+    outofsyncframe = 0
 
     # number of frames
     frames = min(len(dl1), len(dl2))
@@ -113,16 +113,17 @@ def difference(dl1, dl2, s1, s2, r1, r2):
 
         if shot_dif > 10:
             cv2.putText(comp, "!", (frame_width, frame_height // 2 ), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,0,0), 3)
-            # we are going to deduct some points of the moves are significantly different
-            deduction += 150
+            # counting the number of out of sync frames
+            outofsyncframe += 1
         cv2.imshow(str(f), comp)
         cv2.waitKey(1)
         if shot_dif > 10:
             cv2.waitKey(500)
 
 
-    #print(f"The number of frames is {frames}")
-    deduction_score = round(deduction / frames)
+    #print(f"The number of out of sync frames is {outofsyncframe, frames}")
+    deduction_score = (outofsyncframe / frames)*100*2
+    #print(f'Out of sync {deduction_score}%')
     return deduction_score
 
 
