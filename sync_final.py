@@ -1,3 +1,5 @@
+# current version
+
 import os
 import subprocess
 from glob import glob
@@ -133,6 +135,16 @@ def difference(dl1, dl2, s1, s2, r1, r2):
 # REFERENCING
 # find all video clips in directory
 clip_list = glob('*mov')
+
+# first we make sure that all the clips are 24fps
+for clip in clip_list:
+    clip_name = clip.split(".")[0] + "24"
+    #print(clip_name)
+    command = "ffmpeg -i {0} -filter:v fps=24 {1}.mov".format(clip, clip_name)
+    os.system(command)
+
+clip_list = glob('*24.mov')
+#print(clip_list)
 if get_frame_count(clip_list[0])[1] > get_frame_count(clip_list[1])[1]:
     ref_clip = clip_list[0]
     clip = clip_list[1]
@@ -200,4 +212,6 @@ deduction_score = difference(dancer1, dancer2, dancer1_shots, dancer2_shots, dan
 print(f"\n You are {100 - round(deduction_score)}% in sync with your model dancer!")
 
 command = "rm *cut.mov"
+os.system(command)
+command = "rm *24.mov"
 os.system(command)
