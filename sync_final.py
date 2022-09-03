@@ -1,4 +1,4 @@
-# current version
+# current version 03/09/22
 
 import os
 import subprocess
@@ -9,8 +9,7 @@ import mediapipe as mp
 from statistics import mean
 import numpy as np
 
-# returns the duration of a clip in seconds
-def get_duration(filename):
+def get_duration(filename): # returns the duration of a clip in seconds
     video = cv2.VideoCapture(filename)
 
     fps = video.get(cv2.CAP_PROP_FPS)
@@ -19,13 +18,11 @@ def get_duration(filename):
     duration = (frame_count/fps)
     return duration
 
-#returns the number of frames in a clip
-def get_frame_count(filename):
+def get_frame_count(filename): #returns the number of frames in a clip
     cap = cv2.VideoCapture(filename)
 
     frame_count = int(math.floor(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
     return cap, frame_count
-
 
 # utils
 mpDraw = mp.solutions.drawing_utils
@@ -38,7 +35,6 @@ def landmarks(video):
     #laod video
     pose = mpPose.Pose()
 
-
     frames = []
     shots = []
     results = []
@@ -46,9 +42,6 @@ def landmarks(video):
     # get the video capture and frame count of video
     cap, frame_count = get_frame_count(video)
     print(f'frame count is {frame_count}')
-
-
-    #frame_count = 92
 
     # process video
     for i in range(frame_count):
