@@ -97,7 +97,6 @@ def difference(dl1, dl2, s1, s2, r1, r2):
             # difference
             dif = abs((g1 - g2) / g1)
 
-
             # use this as a percentage difference
             #print(f"here is the difference: {dif}")
 
@@ -107,20 +106,19 @@ def difference(dl1, dl2, s1, s2, r1, r2):
         shot_dif = mean(shot_percentage)
         #print(f"difference per shot {shot_dif}")
 
-        # if the dancers aren't matching with each other
+        # drawing
         frame_height, frame_width, _ = s1[f].shape
         mpDraw.draw_landmarks(s1[f], r1[f].pose_landmarks, mpPose.POSE_CONNECTIONS)
         mpDraw.draw_landmarks(s2[f], r2[f].pose_landmarks, mpPose.POSE_CONNECTIONS)
         comp = np.concatenate((s1[f], s2[f]), axis=1)
 
+        # if the dancers aren't matching with each other
         if shot_dif > 10:
-            cv2.putText(comp, "!", (frame_width, frame_height // 2 ), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,0,0), 3)
+            cv2.putText(comp, "!", (frame_width, frame_height // 2 ), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 3)
             # counting the number of out of sync frames
             outofsyncframe += 1
         cv2.imshow(str(f), comp)
-        cv2.waitKey(1)
-        if shot_dif > 10:
-            cv2.waitKey(500)
+        cv2.waitKey(500)
 
 
     #print(f"The number of out of sync frames is {outofsyncframe, frames}")
