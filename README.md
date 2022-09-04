@@ -13,9 +13,9 @@ Happy dancing! <br/ >
 
 ## Want to try it out?
 
-I am working on making this accessible for everyone: **non-programmers included!** Unfortunately, I'm not quite there yet so you will need to install a bunch of packages (sorry!) and run the code on **macOS 12.5.1**.
+I am working on making this accessible for everyone: **non-programmers included!** Unfortunately, I'm not quite there yet so you will need to install a bunch of packages (sorry!) and run the code on **macOS 12.5.1**. <br />
 
-### Dependencies 
+### Dependencies
 
 Have these installed these before running:
 * os
