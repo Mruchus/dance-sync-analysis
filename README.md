@@ -8,7 +8,7 @@ You will get a comparison video, with alerts where you are not in sync and a fin
 
 ![](https://github.com/Mruchus/dance-sync-analysis/blob/main/comparisonsample.gif)
 
-![<img src="https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png" width="100"/>](https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png) <br />
+[<img src="https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png" width="100"/>](https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png) <br />
 
 Happy dancing! <br />
 
