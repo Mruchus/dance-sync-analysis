@@ -6,7 +6,7 @@ When learning a dance, it can be hard to pinpoint where you're going wrong by ju
 
 You will get a comparison video, with alerts where you are not in sync and a final score at the end. <br />
 
-Happy dancing! <br/ >
+Happy dancing! <br />
 
 ## How does it work?
 
