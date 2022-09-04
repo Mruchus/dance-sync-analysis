@@ -30,7 +30,7 @@ mpPose = mp.solutions.pose
 
 def landmarks(video):
 
-    print(f"Processing {video}...")
+    #print(f"Processing {video}...")
 
     #laod video
     pose = mpPose.Pose()
@@ -41,7 +41,7 @@ def landmarks(video):
 
     # get the video capture and frame count of video
     cap, frame_count = get_frame_count(video)
-    print(f'frame count is {frame_count}')
+    #print(f'frame count is {frame_count}')
 
     # process video
     for i in range(frame_count):
@@ -56,7 +56,7 @@ def landmarks(video):
         frames.append([(lm.x, lm.y) for lm in result.pose_landmarks.landmark])
         #print(i)
 
-    print("Video finished processing...")
+    #print("Video finished processing...")
     return frames, shots, results
 
 def difference(dl1, dl2, s1, s2, r1, r2):
@@ -67,7 +67,7 @@ def difference(dl1, dl2, s1, s2, r1, r2):
 
     # number of frames
     frames = min(len(dl1), len(dl2))
-    print(f"We are processing {frames} frames")
+    #print(f"We are processing {frames} frames")
 
     print("Analysing dancers...")
 
@@ -92,10 +92,9 @@ def difference(dl1, dl2, s1, s2, r1, r2):
 
             # use this as a percentage difference
             #print(f"here is the difference: {dif}")
-
             shot_percentage.append(abs(dif))
 
-        #print(shot_percentage)
+        # FINISHED analysing connections
         shot_dif = mean(shot_percentage)
         #print(f"difference per shot {shot_dif}")
 
@@ -105,13 +104,16 @@ def difference(dl1, dl2, s1, s2, r1, r2):
         mpDraw.draw_landmarks(s2[f], r2[f].pose_landmarks, mpPose.POSE_CONNECTIONS)
         comp = np.concatenate((s1[f], s2[f]), axis=1)
 
-        # if the dancers aren't matching with each other
+        # if the dancers aren't matching with each other - display warning
         if shot_dif > 10:
             cv2.putText(comp, "!", (frame_width, frame_height // 2 ), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 3)
-            # counting the number of out of sync frames
-            outofsyncframe += 1
+            outofsyncframe += 1 # use for deduction
+
         cv2.imshow(str(f), comp)
-        cv2.waitKey(500)
+        cv2.waitKey(1) # show frame
+
+        if shot_dif > 10:
+            cv2.waitKey(50) # hold for longer if not in sync
 
 
     #print(f"The number of out of sync frames is {outofsyncframe, frames}")
@@ -195,7 +197,7 @@ os.system(command)
 path = "/Users/mruchus/sync"
 
 # processing our two dancers
-print(f"clips we are comparing are: {cut_names[0], cut_names[1]}")
+print(f"model: {cut_names[0]}, comparision: {cut_names[1]} \n")
 dancer1, dancer1_shots, dancer1_res = landmarks(cut_names[0])
 dancer2, dancer2_shots, dancer2_res = landmarks(cut_names[1])
 
