@@ -1,6 +1,2 @@
-# dance-sync-analysis
+# dance-sync-analysis: Are your moves any good compared to your model dancer?
 
-- input: videos of 2 dancers
-- output: sync score
-
-## WIKI HAS ALL DETAILS <br >
