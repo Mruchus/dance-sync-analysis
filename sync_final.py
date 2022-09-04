@@ -113,7 +113,7 @@ def difference(dl1, dl2, s1, s2, r1, r2):
         cv2.waitKey(1) # show frame
 
         if shot_dif > 10:
-            cv2.waitKey(50) # hold for longer if not in sync
+            cv2.waitKey(500) # hold for longer if not in sync
 
 
     #print(f"The number of out of sync frames is {outofsyncframe, frames}")
