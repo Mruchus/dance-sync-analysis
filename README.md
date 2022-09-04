@@ -16,8 +16,8 @@ Have these installed these before running:
 * statistics
 * Numpy https://numpy.org/install/
 * Praat https://www.fon.hum.uva.nl/praat/download_mac.html
-* Ffmpeg https://ffmpeg.org/download.html
-<br />(Some come already packaged with the standard Python installation)
+* Ffmpeg https://ffmpeg.org/download.html <br />
+(Some come already packaged with the standard Python installation)
 
 ### Executing
 Download the folder and run the main python file called 'sync_final.py'
