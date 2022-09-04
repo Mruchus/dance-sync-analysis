@@ -1,6 +1,15 @@
-# Are your moves any good compared to your model dancer?
+# Are your moves any good?
 
+**Hi there! 'Dance Sync', originally called 'Pose' is a program that allows you to compare your dancing to your model dancer's.** <br />
+When learning a dance, it can be hard to pinpoint where you're going wrong by just looking in the mirror. Instead, record a video of your dancing and plug it into 'Dance Sync' - it will analyse your movement and compare it to the video of the orginial dancer. <br/ >
 
+You will get a comparison video, with alerts where you are not in sync and a final score at the end. <br/ >
+
+Happy dancing! <br/ >
+
+## How does it work?
+
+ 🚧 *Under construction* 🚧 <br />
 
 ## Want to try it out?
 
@@ -22,7 +31,7 @@ Have these installed these before running:
 (Some come already packaged with the standard Python installation)
 
 ### Executing
-Download the folder and run the main python file called 'sync_final.py'
+Download the folder and run the main python file called **'sync_final.py'**. Make sure the videos are in **.mov** format and are the same dimension i.e. 1280x720 px
 
 ## Acknowledgments
 * Inspiration: https://www.youtube.com/watch?v=zxhXj72WClE
