@@ -1,9 +1,10 @@
 # Are your moves any good?
 
 **Hi there! 'Dance Sync', originally called 'Pose' is a program that allows you to compare your dancing to your model dancer's.** <br />
-When learning a dance, it can be hard to pinpoint where you're going wrong by just looking in the mirror. Instead, record a video of your dancing and plug it into 'Dance Sync' - it will analyse your movement and compare it to the video of the orginial dancer. <br/ >
 
-You will get a comparison video, with alerts where you are not in sync and a final score at the end. <br/ >
+When learning a dance, it can be hard to pinpoint where you're going wrong by just looking in the mirror. Instead, record a video of your dancing and plug it into 'Dance Sync' - it will analyse your movement and compare it to the video of the orginial dancer. <br />
+
+You will get a comparison video, with alerts where you are not in sync and a final score at the end. <br />
 
 Happy dancing! <br/ >
 
