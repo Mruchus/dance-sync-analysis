@@ -4,6 +4,7 @@ import os
 import subprocess
 from glob import glob
 import cv2
+from cv2 import VideoWriter_fourcc, VideoWriter
 import math
 import mediapipe as mp
 from statistics import mean
@@ -64,12 +65,15 @@ def difference(dl1, dl2, s1, s2, r1, r2):
     connections = [(16, 14), (14, 12), (12, 11), (11, 13), (13, 15), (12, 24), (11, 23), (24, 23), (24, 26), (23, 25), (26, 28), (25, 27)]
     deduction = 0
     outofsyncframe = 0
+    live_score = 100
 
     # number of frames
     frames = min(len(dl1), len(dl2))
     #print(f"We are processing {frames} frames")
 
     print("Analysing dancers...")
+
+    video = VideoWriter('output.mp4', VideoWriter_fourcc(*'mp4v'), 24.0, (2*720, 1280), isColor=True)
 
     for f in range(frames):
         # percentage difference of joints per frame
@@ -104,96 +108,112 @@ def difference(dl1, dl2, s1, s2, r1, r2):
         mpDraw.draw_landmarks(s2[f], r2[f].pose_landmarks, mpPose.POSE_CONNECTIONS)
         comp = np.concatenate((s1[f], s2[f]), axis=1)
 
+        colour = (0, 0, 255) if shot_dif > 10 else (255, 0, 0)
+
+        cv2.putText(comp, f"Diff: {shot_dif:.2f}", (40, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 3)
+
         # if the dancers aren't matching with each other - display warning
         if shot_dif > 10:
-            cv2.putText(comp, "!", (frame_width, frame_height // 2 ), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 3)
             outofsyncframe += 1 # use for deduction
 
+        live_score = ((f+1 - outofsyncframe) / (f+1)) * 100.0
+        cv2.putText(comp, f"Score: {live_score:.2f}%", (frame_width +40, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 3)
+
         cv2.imshow(str(f), comp)
+        video.write(comp)
         cv2.waitKey(1) # show frame
 
-        if shot_dif > 10:
-            cv2.waitKey(500) # hold for longer if not in sync
-
-
-    #print(f"The number of out of sync frames is {outofsyncframe, frames}")
-    deduction_score = (outofsyncframe / frames)*100*2
-    #print(f'Out of sync {deduction_score}%')
-    return deduction_score
+    video.release()
+    return live_score
 
 
 # --------------------------------------------------------- SYNCING -----------------------------------------------------------------------------------
-
-
 # REFERENCING
-# find all video clips in directory
-clip_list = glob('*mov')
+def convert_to_same_framerate():
+    # find all video clips in directory
+    clip_list = glob('*mov')
+    # first we make sure that all the clips are 24fps
+    for clip in clip_list:
+        clip_name = clip.split(".")[0] + "24"
+        # print(clip_name)
+        command = "ffmpeg -i {0} -filter:v fps=24 {1}.mov".format(clip, clip_name)
+        os.system(command)
 
-# first we make sure that all the clips are 24fps
-for clip in clip_list:
-    clip_name = clip.split(".")[0] + "24"
-    #print(clip_name)
-    command = "ffmpeg -i {0} -filter:v fps=24 {1}.mov".format(clip, clip_name)
+    return clip_name
+
+def choose_reference_clip():
+    clip_list = glob('*24.mov')
+    # print(clip_list)
+    # reference clip is longer than comparison clip
+    if get_frame_count(clip_list[0])[1] > get_frame_count(clip_list[1])[1]:
+        ref_clip = clip_list[0]
+        comparison_clip = clip_list[1]
+    else:
+        ref_clip = clip_list[1]
+        comparison_clip = clip_list[0]
+    print(clip_list)
+
+    return ref_clip, comparison_clip
+
+def convert_to_wav():
+    # save ref clip
+    command = "ffmpeg -i {0} ref.wav".format(ref_clip)
+    os.system(command)
+    # cut clip
+    clip_name = clip.split(".")[0]
+    # print(clip_name)
+    # extract audio from other vid and save
+    command = "ffmpeg -i {0} {1}.wav".format(clip, clip_name)
     os.system(command)
 
-clip_list = glob('*24.mov')
-#print(clip_list)
-if get_frame_count(clip_list[0])[1] > get_frame_count(clip_list[1])[1]:
-    ref_clip = clip_list[0]
-    clip = clip_list[1]
-else:
-    ref_clip = clip_list[1]
-    clip = clip_list[0]
+    return clip_name
 
+def find_sound_offset(clip_name):
+    # find offset
+    command = "/Applications/Praat.app/Contents/MacOS/Praat --run 'crosscorrelate.praat' ref.wav {0}.wav 0 30".format(
+        clip_name)
+    offset = subprocess.check_output(command, shell=True)
 
-print(clip_list)
+    # delete wav files
+    command = "rm *wav"
+    os.system(command)
 
-# save ref clip
-command = "ffmpeg -i {0} ref.wav".format(ref_clip)
-os.system(command)
+    return offset
 
-results = []
-results.append((ref_clip, 0))
+def trim_clips():
+    # reference clip is longer
+    # duration is length of comparison clip
+    duration = get_duration(clip)
+    cut_names = []
+    for result in results:
+        cut_name = result[0].split(".")[0] + "cut.mov"
+        cut_names.append(str(cut_name))
+    clip_start = abs(float(results[1][1]))
+    command = "ffmpeg -i {0} -ss {1} -t {2} {3}".format(ref_clip, str(clip_start), str(duration), cut_names[0])
+    os.system(command)
+    command = "ffmpeg -i {0} -ss {1} -t {2} {3}".format(clip, 0, str(duration), cut_names[1])
+    os.system(command)
 
-# cut clip
-clip_name = clip.split(".")[0]
-#print(clip_name)
+    return cut_names
 
-# extract audio from other vid and save
-command = "ffmpeg -i {0} {1}.wav".format(clip, clip_name)
-os.system(command)
-
-# command to find offset
-command = "/Applications/Praat.app/Contents/MacOS/Praat --run 'crosscorrelate.praat' ref.wav {0}.wav 0 30".format(clip_name)
-offset = subprocess.check_output(command, shell=True)
-# format and save result
-results.append((clip, str(offset)[2:-4]))
-print(f"results{results}")
-
-# delete wav files
-command = "rm *wav"
-os.system(command)
-
-#trim clips
-# reference clip should be longer
-# duration is length of comparison clip
-
-duration = get_duration(clip)
-cut_names = []
-for result in results:
-    cut_name = result[0].split(".")[0] + "cut.mov"
-    cut_names.append(str(cut_name))
-
-
-clip_start = abs(float(results[1][1]))
-command = "ffmpeg -i {0} -ss {1} -t {2} {3}".format(ref_clip, str(clip_start), str(duration), cut_names[0])
-os.system(command)
-command = "ffmpeg -i {0} -ss {1} -t {2} {3}".format(clip, 0, str(duration), cut_names[1])
-
-os.system(command)
+# clip_name = convert_to_same_framerate()
+# ref_clip, clip = choose_reference_clip()
+# clip_name = convert_to_wav()
+#
+# results = []
+# results.append((ref_clip, 0))
+#
+# offset = find_sound_offset(clip_name)
+# results.append((clip, str(offset)[2:-4])) # offset in seconds
+# print(f"results{results}")
+#
+# cut_names = trim_clips()
 
 # --------------------------------------------------------- MAIN PROCESSING --------------------------------------------------------------------------------------
 
+cut_names = ['50fpschuu24cut.mov', 'yves24cut.mov']
 path = "/Users/mruchus/sync"
 
 # processing our two dancers
@@ -201,10 +221,14 @@ print(f"model: {cut_names[0]}, comparision: {cut_names[1]} \n")
 dancer1, dancer1_shots, dancer1_res = landmarks(cut_names[0])
 dancer2, dancer2_shots, dancer2_res = landmarks(cut_names[1])
 
-deduction_score = difference(dancer1, dancer2, dancer1_shots, dancer2_shots, dancer1_res, dancer2_res)
-print(f"\n You are {100 - round(deduction_score)}% in sync with your model dancer!")
+score = difference(dancer1, dancer2, dancer1_shots, dancer2_shots, dancer1_res, dancer2_res)
+print(f"\n You are {score:.2f} % in sync with your model dancer!")
 
-command = "rm *cut.mov"
-os.system(command)
-command = "rm *24.mov"
-os.system(command)
+
+def remove_final_videos():
+    command = "rm *cut.mov"
+    os.system(command)
+    command = "rm *24.mov"
+    os.system(command)
+
+# remove_final_videos()
