@@ -14,9 +14,9 @@ Happy dancing! <br />
 
 ## How does it work?
 
-###1. How do we compare the dancers?
+### 1. How do we compare the dancers?
 
-###2. How do we know when to start comparing the two videos?
+### 2. How do we know when to start comparing the two videos?
 
  🚧 *Under construction* 🚧 <br />
 
