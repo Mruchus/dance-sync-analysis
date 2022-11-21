@@ -16,7 +16,7 @@ Happy dancing! <br />
 
 ### 1. How do we compare the dancers?
 
-### 2. How do we know when to start comparing the two videos?
+### 2. What happens if we input videos of different lengths?
 
  🚧 *Under construction* 🚧 <br />
 
