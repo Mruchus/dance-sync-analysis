@@ -6,7 +6,7 @@ When learning a dance, it can be hard to pinpoint where you're going wrong by ju
 
 You will get a comparison video, with alerts where you are not in sync and a final score at the end. <br />
 
-![](https://github.com/Mruchus/dance-sync-analysis/blob/main/comparisonsample.gif)
+![](https://github.com/Mruchus/dance-sync-analysis/blob/f400e40913e5ccd3b6a379e619a5e0c267919b4f/comparisonsample.gif)
 
 [<img src="https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png" width="600"/>](https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png) <br />
 
