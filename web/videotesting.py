@@ -1,4 +1,5 @@
 import gradio as gr
+# dont cry if the executable is not found. just download it bestie
 
 def video_identity(video):
     return video

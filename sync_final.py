@@ -1,4 +1,4 @@
-# current version 03/09/22
+# "The Great Refactor" 21/11/22
 
 import os
 import subprocess
@@ -10,69 +10,71 @@ import mediapipe as mp
 from statistics import mean
 import numpy as np
 
-def get_duration(filename): # returns the duration of a clip in seconds
-    video = cv2.VideoCapture(filename)
 
-    fps = video.get(cv2.CAP_PROP_FPS)
-    frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
 
-    duration = (frame_count/fps)
+def get_duration(filename): # returns the duration of a clip
+    capturedVideo = cv2.VideoCapture(filename)
+
+    fps = capturedVideo.get(cv2.CAP_PROP_FPS) # frame rate
+    frameCount = capturedVideo.get(cv2.CAP_PROP_FRAME_COUNT)
+
+    duration = (frameCount/fps) # in secs
     return duration
 
-def get_frame_count(filename): #returns the number of frames in a clip
-    cap = cv2.VideoCapture(filename)
 
-    frame_count = int(math.floor(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
-    return cap, frame_count
+
+def get_frame_count(filename): #returns the number of frames in a clip
+    capturedVideo = cv2.VideoCapture(filename)
+
+    frameCount = int(math.floor(capturedVideo.get(cv2.CAP_PROP_FRAME_COUNT)))
+    return capturedVideo, frameCount
+
+
 
 # utils
 mpDraw = mp.solutions.drawing_utils
 mpPose = mp.solutions.pose
 
 def landmarks(video):
+    pose = mpPose.Pose() # initialise pose object
 
-    #print(f"Processing {video}...")
-
-    #laod video
-    pose = mpPose.Pose()
-
+    xyLandmardCoords = [] # we only care about x and y coords, NOT z
     frames = []
-    shots = []
-    results = []
+    landmarks = []
 
-    # get the video capture and frame count of video
-    cap, frame_count = get_frame_count(video)
-    #print(f'frame count is {frame_count}')
+    # capture video
+    capturedVideo, frame_count = get_frame_count(video)
 
     # process video
-    for i in range(frame_count):
-        success, img = cap.read()
-        shots.append(img)
+    for i in range(frame_count): 
+        success, image = capturedVideo.read() # read frames one by one
+        frames.append(image)
+        imgRGB = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) # formatting
 
-        imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        result = pose.process(imgRGB)
-        results.append(result)
+        # get landmarks
+        landmarksInFrame = pose.process(imgRGB)
+        landmarks.append(landmarksInFrame)
 
         # information about the joint positions
-        frames.append([(lm.x, lm.y) for lm in result.pose_landmarks.landmark])
-        #print(i)
+        xyLandmardCoords.append([(lm.x, lm.y) for lm in landmarksInFrame.pose_landmarks.landmark])
 
-    #print("Video finished processing...")
-    return frames, shots, results
+    return xyLandmardCoords, frames, landmarks
 
-def difference(dl1, dl2, s1, s2, r1, r2):
+
+
+def difference(xy1, xy2, frames1, frames2, landmarks1, landmarks): # x and y positions of joints | frames | landmarks - info including z
     # all the joints we are using
+    # ref: https://mediapipe.dev/images/mobile/pose_tracking_full_body_landmarks.png
     connections = [(16, 14), (14, 12), (12, 11), (11, 13), (13, 15), (12, 24), (11, 23), (24, 23), (24, 26), (23, 25), (26, 28), (25, 27)]
-    deduction = 0
+
+    # keep track of current number of out of sync frames (OFS)
     outofsyncframe = 0
     live_score = 100
 
     # number of frames
-    frames = min(len(dl1), len(dl2))
-    #print(f"We are processing {frames} frames")
+    frames = min(len(xy1), len(xy2)) # min avoids one empty display
 
     print("Analysing dancers...")
-
     video = VideoWriter('output.mp4', VideoWriter_fourcc(*'mp4v'), 24.0, (2*720, 1280), isColor=True)
 
     for f in range(frames):
@@ -80,7 +82,7 @@ def difference(dl1, dl2, s1, s2, r1, r2):
         shot_percentage = []
 
         # each model for the frame
-        p1, p2 = dl1[f], dl2[f]
+        p1, p2 = xy1[f], xy2[f]
         for connect in connections:
             m1, m2 = connect
 
@@ -103,10 +105,10 @@ def difference(dl1, dl2, s1, s2, r1, r2):
         #print(f"difference per shot {shot_dif}")
 
         # drawing
-        frame_height, frame_width, _ = s1[f].shape
-        mpDraw.draw_landmarks(s1[f], r1[f].pose_landmarks, mpPose.POSE_CONNECTIONS)
-        mpDraw.draw_landmarks(s2[f], r2[f].pose_landmarks, mpPose.POSE_CONNECTIONS)
-        comp = np.concatenate((s1[f], s2[f]), axis=1)
+        frame_height, frame_width, _ = frames1[f].shape
+        mpDraw.draw_landmarks(frames1[f], landmarks1[f].pose_landmarks, mpPose.POSE_CONNECTIONS)
+        mpDraw.draw_landmarks(frames2[f], landmarks[f].pose_landmarks, mpPose.POSE_CONNECTIONS)
+        comp = np.concatenate((frames1[f], frames2[f]), axis=1)
 
         colour = (0, 0, 255) if shot_dif > 10 else (255, 0, 0)
 
@@ -198,30 +200,30 @@ def trim_clips():
 
     return cut_names
 
-# clip_name = convert_to_same_framerate()
-# ref_clip, clip = choose_reference_clip()
-# clip_name = convert_to_wav()
-#
-# results = []
-# results.append((ref_clip, 0))
-#
-# offset = find_sound_offset(clip_name)
-# results.append((clip, str(offset)[2:-4])) # offset in seconds
-# print(f"results{results}")
-#
-# cut_names = trim_clips()
+clip_name = convert_to_same_framerate()
+ref_clip, clip = choose_reference_clip()
+clip_name = convert_to_wav()
+
+results = []
+results.append((ref_clip, 0))
+
+offset = find_sound_offset(clip_name)
+results.append((clip, str(offset)[2:-4])) # offset in seconds
+print(f"results{results}")
+
+cut_names = trim_clips()
 
 # --------------------------------------------------------- MAIN PROCESSING --------------------------------------------------------------------------------------
 
-cut_names = ['50fpschuu24cut.mov', 'yves24cut.mov']
+#cut_names = ['50fpschuu24cut.mov', 'yves24cut.mov']
 path = "/Users/mruchus/sync"
 
 # processing our two dancers
 print(f"model: {cut_names[0]}, comparision: {cut_names[1]} \n")
-dancer1, dancer1_shots, dancer1_res = landmarks(cut_names[0])
-dancer2, dancer2_shots, dancer2_res = landmarks(cut_names[1])
+xyDancer1, dancer1_Frames, dancer1_Landmarks = landmarks(cut_names[0])
+xyDancer2, dancer2_Frames, dancer2_Landmarks = landmarks(cut_names[1])
 
-score = difference(dancer1, dancer2, dancer1_shots, dancer2_shots, dancer1_res, dancer2_res)
+score = difference(xyDancer1, xyDancer2, dancer1_Frames, dancer2_Frames, dancer1_Landmarks, dancer2_Landmarks)
 print(f"\n You are {score:.2f} % in sync with your model dancer!")
 
 
@@ -231,4 +233,4 @@ def remove_final_videos():
     command = "rm *24.mov"
     os.system(command)
 
-# remove_final_videos()
+remove_final_videos()
