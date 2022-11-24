@@ -20,7 +20,7 @@ Happy dancing! <br />
 There may be a case where the dance **song starts a little bit later** in one video. This is not a problem as the program automatically syncs the two dancers so comparisons only happen when they are dancing to the same part of the song! <br />
 
 But how do we do this? <br />
-We sync the dancers using the music! <br />
+We sync the dancers using the music! Both dancers are dancing to the same music so we can use this to find which when they are doing the same choreo. <br />
 
 1. Find the offset between the audio in the two videos by... <br />
 - Computing the cross-correlation of the sound waves for different time lags <br />
