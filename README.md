@@ -27,10 +27,13 @@ We sync the dancers using the music! <br />
 - Find the time lag (a.k.a. **phase difference**) where the cross-correlation is a maximum <br />
 (This is also known as **TIME DELAY ANALYSIS**)
 
+![](https://github.com/Mruchus/dance-sync-analysis/blob/65e7469d1b7e8d42438a568b58fddfc50054b2ec/syncExplain1.JPG)
+
 2. Trim the video in which the dancing starts later <br />
 - We cut the video with same duration as the time lag so... <br />
 - both dancers start the same choreography at the beginning of the video! <br />
 
+![](https://github.com/Mruchus/dance-sync-analysis/blob/65e7469d1b7e8d42438a568b58fddfc50054b2ec/syncExplain2.JPG)
 
  🚧 *Under construction* 🚧 <br />
 
