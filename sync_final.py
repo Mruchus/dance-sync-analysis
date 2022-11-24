@@ -239,7 +239,6 @@ final_comparison_clips = trim_clips(comparison_clip, offset_results)
 
 # --------------------------------------------------------- MAIN --------------------------------------------------------------------------------------
 
-#cut_names = ['50fpschuu24cut.mov', 'yves24cut.mov']
 
 # processing our two dancers
 print(f"model: {final_comparison_clips[0]}, comparision: {final_comparison_clips[1]} \n")
