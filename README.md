@@ -24,7 +24,8 @@ We sync the dancers using the music! <br />
 
 1. Find the offset between the audio in the two videos by... <br />
 - Computing the cross-correlation of the sound waves for different time lags <br />
-- Find the time lag where the cross-correlation is a maximum <br />
+- Find the time lag (a.k.a. **phase difference**) where the cross-correlation is a maximum <br />
+(This is also known as **TIME DELAY ANALYSIS**)
 
 2. Trim the video in which the dancing starts later <br />
 - We cut the video with same duration as the time lag so... <br />
