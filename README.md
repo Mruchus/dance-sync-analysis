@@ -17,6 +17,19 @@ Happy dancing! <br />
 ### 1. How do we compare the dancers?
 
 ### 2. What happens if we input videos of different lengths?
+There may be a case where the dance **song starts a little bit later** in one video. This is not a problem as the program automatically syncs the two dancers so comparisons only happen when they are dancing to the same part of the song! <br />
+
+But how do we do this? <br />
+We sync the dancers using the music! <br />
+
+1. Find the offset between the audio in the two videos by... <br />
+- Computing the cross-correlation of the sound waves for different time lags <br />
+- Find the time lag where the cross-correlation is a maximum <br />
+
+2. Trim the video in which the dancing starts later <br />
+- We cut the video with same duration as the time lag so... <br />
+- both dancers start the same choreography at the beginning of the video! <br />
+
 
  🚧 *Under construction* 🚧 <br />
 
