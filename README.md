@@ -61,7 +61,7 @@ Have these installed these before running:
 * Ffmpeg https://ffmpeg.org/download.html <br />
 
 ### Executing
-Download the folder and run the main python file called **'sync_final.py'**. Make sure the videos are in **.mov** format and are the same dimension i.e. 1280x720 px
+Download the folder and run the main python file called **'dance.py'**. Make sure the videos are in **.mov** format and are the same dimension i.e. 1280x720 px
 
 ## Acknowledgments
 * Inspiration: https://www.youtube.com/watch?v=zxhXj72WClE
