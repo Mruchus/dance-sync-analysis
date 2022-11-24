@@ -23,7 +23,7 @@ We compare the gradients of their limbs i.e. the angle of their arms, legs, tors
 
 3. Compute gradient using (x,y) coordinates of joints <br />
 
-![](https://github.com/Mruchus/dance-sync-analysis/blob/6483c792c91f5f57239243693b56d3315a2532a6/gradientEXPLAIN.png)
+[<img src="https://github.com/Mruchus/dance-sync-analysis/blob/6483c792c91f5f57239243693b56d3315a2532a6/gradientEXPLAIN.png" width="600"/>](https://github.com/Mruchus/dance-sync-analysis/blob/6483c792c91f5f57239243693b56d3315a2532a6/gradientEXPLAIN.png) <br />
 
 4. Find percentage difference between limb of dancer1 and dancer2. Repeat and average for ALL limbs in once frame. Repeat for all frames <br />
 
