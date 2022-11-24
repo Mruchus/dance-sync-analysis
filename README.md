@@ -20,17 +20,20 @@ Happy dancing! <br />
 There may be a case where the dance **song starts a little bit later** in one video. This is not a problem as the program automatically syncs the two dancers so comparisons only happen when they are dancing to the same part of the song! <br />
 
 But how do we do this? <br />
-We sync the dancers using the music! <br />
+We sync the dancers using the music! Both dancers are dancing to the same music so we can use this to find which when they are doing the same choreo. <br />
 
 1. Find the offset between the audio in the two videos by... <br />
 - Computing the cross-correlation of the sound waves for different time lags <br />
 - Find the time lag (a.k.a. **phase difference**) where the cross-correlation is a maximum <br />
 (This is also known as **TIME DELAY ANALYSIS**)
 
+![](https://github.com/Mruchus/dance-sync-analysis/blob/65e7469d1b7e8d42438a568b58fddfc50054b2ec/syncExplain1.JPG)
+
 2. Trim the video in which the dancing starts later <br />
 - We cut the video with same duration as the time lag so... <br />
 - both dancers start the same choreography at the beginning of the video! <br />
 
+![](https://github.com/Mruchus/dance-sync-analysis/blob/65e7469d1b7e8d42438a568b58fddfc50054b2ec/syncExplain2.JPG)
 
  🚧 *Under construction* 🚧 <br />
 
