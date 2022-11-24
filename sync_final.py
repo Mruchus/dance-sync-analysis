@@ -179,6 +179,7 @@ def find_sound_offset(clip_name):
 
     return offset
 
+# --------------------------------------------------------- COMPUTE SYNC ------------------------------------------------------------------------
 
 # to make sure both clips are same length before comparison
 def trim_clips(comparison_clip, offset_results):
