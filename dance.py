@@ -10,6 +10,8 @@ import numpy as np
 
 OUTPUT_DIR="output"
 EXIST_FLAG="-n" # ignore existing file, change to -y to always overwrite
+PRAAT_PATH="/Applications/Praat.app/Contents/MacOS/Praat"
+SEARCH_INTERVAL = 30 # in secs
 
 # --------------------------------------------------------- VIDEO PROCESSING --------------------------------------------------------------------------------------
 
@@ -137,10 +139,10 @@ def extract_clip_name(path):
     return path.split('/')[-1].split(".")[0]
 
 def convert_to_same_framerate(clip):
-    "convert to 24p"
+    "convert to 24p and return path to clip with 24fps"
     clip_24 = f"{OUTPUT_DIR}/{extract_clip_name(clip) + '_24'}.mov"
     os.system(f"ffmpeg {EXIST_FLAG} -i {clip} -filter:v fps=24 {clip_24}")
-    return ref_clip
+    return clip_24
     
  
 
@@ -153,57 +155,45 @@ def validate_reference_clip(ref_clip, comparison_clip):
         sys.exit(-1)
 
 
-def convert_to_wav(ref_clip, comparison_clip):
-    # Convert REFERENCE
-    command = f"ffmpeg {EXIST_FLAG} -i {ref_clip} {OUTPUT_DIR}/{extract_clip_name(ref_clip)}.wav"
+def convert_to_wav(clip):
+    "returns path to wav file of clip"
+
+    clip_wav = f"{OUTPUT_DIR}/{extract_clip_name(clip)}.wav"
+    command = f"ffmpeg {EXIST_FLAG} -i {clip} {clip_wav}"
     os.system(command)
 
-    # Convert COMPARISON
-    # get the comparison clip name for future assignment
-    comparison_clip_name = comparison_clip.split(".")[0]
-    command = f"ffmpeg {EXIST_FLAG} -i {comparison_clip} {OUTPUT_DIR}/{extract_clip_name(comparison_clip)}.wav"
-    os.system(command)
+    return clip_wav
 
 
 
 # IMPORTANT: The input clips might be difference lengths
 # -> trim clips so only compare when dancers are doing the same amount / section of the choreo
-def find_sound_offset(clip_name):
+def find_sound_offset(ref_wav, comparison_wav):
     # find offset between: ref.wav and clip_name.wav
-    command = "/Applications/Praat.app/Contents/MacOS/Praat --run 'crosscorrelate.praat'" \
-              " ref.wav {0}.wav 0 30".format(clip_name)
+    start_position = 0
+    command = f"{PRAAT_PATH} --run 'crosscorrelate.praat' {ref_wav} {comparison_wav} {start_position} {SEARCH_INTERVAL}"
     # note: code in separate praat file
     offset = subprocess.check_output(command, shell=True)
-
-    # delete wav files (used to sync via reference audio)
-    command = "rm *wav"
-    os.system(command)
-
-    return offset
+    # (did some formatting here to get the offset from b'0.23464366914074475\n' to 0.23464366914074475)
+    # print(f"OFFSET={offset}")
+    return abs(float(str(offset)[2:-3]))
 
 # --------------------------------------------------------- COMPUTE SYNC ------------------------------------------------------------------------
 
 # to make sure both clips are same length before comparison
-def trim_clips(comparison_clip, offset_results):
-    # reference clip is longer
-    # duration is length of comparison clip
+def trim_clips(ref_clip, comparison_clip, offset):
+    # duration in secs 
     duration = get_duration(comparison_clip)
-    cut_clips_names = [] # get names of clips so we assign when reformatting
-    for result in offset_results:
-        cut_name = result[0].split(".")[0] + "cut.mov"
-        cut_clips_names.append(str(cut_name))
 
-    # ref clip should start at time of the offset
-    clip_start = abs(float(offset_results[1][1]))
-    print(clip_start)
-    # ref
-    command = "ffmpeg -i {0} -ss {1} -t {2} {3}".format(ref_clip, str(clip_start), str(duration), cut_clips_names[0])
+    ref_cut = f"{OUTPUT_DIR}/{extract_clip_name(ref_clip) + '_cut.mov'}"
+    comparison_cut = f"{OUTPUT_DIR}/{extract_clip_name(comparison_clip) + '_cut.mov'}"
+
+    command = f"ffmpeg {EXIST_FLAG} -i {ref_clip} -ss {offset} -t {duration} {ref_cut}"
     os.system(command)
-    # comparison
-    command = "ffmpeg -i {0} -ss {1} -t {2} {3}".format(comparison_clip, 0, str(duration), cut_clips_names[1])
+    command = f"ffmpeg {EXIST_FLAG} -i {comparison_clip} -ss 0 -t {duration} {comparison_cut}"
     os.system(command)
 
-    return cut_clips_names
+    return ref_cut, comparison_cut
 
 
 def remove_final_videos():
@@ -215,12 +205,8 @@ def remove_final_videos():
 # --------------------------------------------------------- PREPARE VIDEOS --------------------------------------------------------------------------------------
 
 import sys
-# adjust frame rate
-# clip_list = glob('*mov')
-
 # Launch with these arguments
 # python dance.py video/chuu.mov video/cyves.mov
-
 
 #create output dir
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -236,22 +222,14 @@ validate_reference_clip(ref_clip, comparison_clip)
 
 
 # # convert to wav for audio analysis
-convert_to_wav(ref_clip, comparison_clip)
+ref_clip_wav, comparison_clip_wav = convert_to_wav(ref_clip), convert_to_wav(comparison_clip)
 
-# # set up offset results & find offset for comparison clip
-# offset_results = []
-# offset_results.append((ref_clip, 0)) # one of the clips has no offset
+offset = find_sound_offset(ref_clip_wav, comparison_clip_wav)
+# gets no. secs the comp clip is ahead of the ref clip
 
-# offset = find_sound_offset(comparison_clip_name)
-# # gets no. secs the comp clip is ahead of the ref clip
-# offset_results.append((comparison_clip, str(offset)[2:-3])) # offset in seconds
-# # (did some formatting here to get the offset from b'0.23464366914074475\n to 0.23464366914074475)
-
-# final_comparison_clips = trim_clips(comparison_clip, offset_results)
-# print(comparison_clip, offset_results)
-# #final_comparison_clips = ['chuu.mov', 'cyvescut.nov']
+ref_cut, comparison_cut = trim_clips(ref_clip_24, comparison_clip_24, offset)
+print(ref_cut, comparison_cut)
 # # --------------------------------------------------------- MAIN --------------------------------------------------------------------------------------
-
 
 # # processing our two dancers
 # print(f"model: {final_comparison_clips[0]}, comparision: {final_comparison_clips[1]} \n")
