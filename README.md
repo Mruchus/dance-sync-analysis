@@ -15,7 +15,7 @@ Happy dancing! <br />
 ## How does it work?
 
 ### 1. How do we compare the dancers?
-We compare the gradients of their limbs i.e. the angle of their arms, legs, torso etc... <br />
+We compare the gradients of their limbs i.e. the **angle** of their arms, legs, torso etc... <br />
 
 1. Use a Pose Estimation Model to find the postions of a dancer's joints <br />
 
