@@ -1,5 +1,3 @@
-# "The Great Refactor" 21/11/22
-
 import os
 import subprocess
 from glob import glob
@@ -9,6 +7,8 @@ import math
 import mediapipe as mp
 from statistics import mean
 import numpy as np
+
+OUTPUT_DIR="output"
 
 # --------------------------------------------------------- VIDEO PROCESSING --------------------------------------------------------------------------------------
 
@@ -129,12 +129,17 @@ def difference(xy1, xy2, frames1, frames2, landmarks1, landmarks): # x and y pos
 
 # --------------------------------------------------------- SYNCING -----------------------------------------------------------------------------------
 
+
+def extract_clip_name(path):
+    "extract file name from the path, excluding file extension"
+    return path.split('/')[-1].split(".")[0]
+
 def convert_to_same_framerate(clip_list):
     # find all video clips in directory
     for clip in clip_list:
         # convert to 24fps
-        clip_name = clip.split(".")[0] + "24"
-        command = "ffmpeg -i {0} -filter:v fps=24 {1}.mov".format(clip, clip_name)
+        clip_name = extract_clip_name(clip) + "_24"
+        command = f"ffmpeg -i {clip} -filter:v fps=24 {OUTPUT_DIR}/{clip_name}.mov"
         os.system(command)
 
 
@@ -212,40 +217,52 @@ def remove_final_videos():
 
 # --------------------------------------------------------- PREPARE VIDEOS --------------------------------------------------------------------------------------
 
+import sys
 # adjust frame rate
-clip_list = glob('*mov')
-print(f"intial clips {clip_list}")
-convert_to_same_framerate(clip_list)
+# clip_list = glob('*mov')
+
+# Launch with these arguments
+# python dance.py video/chuu.mov video/cyves.mov
+
+
+#create output dir
+os.makedirs(OUTPUT_DIR)
+
+ref_clip = sys.argv[1]
+comparison_clip = sys.argv[2]
+print(f"intial clips {ref_clip} {comparison_clip}")
+convert_to_same_framerate([ref_clip, comparison_clip])
 
 # get reference clip
-ref_clip, comparison_clip = choose_reference_clip(clip_list)
-comparison_clip_name = comparison_clip.split(".")[0] # save the name of comparison clip for future use
-print(f'this is the ref: {ref_clip} and comp: {comparison_clip}')
+# ref_clip, comparison_clip = choose_reference_clip(clip_list)
+# comparison_clip_name = comparison_clip.split(".")[0] # save the name of comparison clip for future use
+# print(f'this is the ref: {ref_clip} and comp: {comparison_clip}')
 
-# convert to wav for audio analysis
-convert_to_wav(ref_clip, comparison_clip)
+# # convert to wav for audio analysis
+# convert_to_wav(ref_clip, comparison_clip)
 
-# set up offset results & find offset for comparison clip
-offset_results = []
-offset_results.append((ref_clip, 0)) # one of the clips has no offset
+# # set up offset results & find offset for comparison clip
+# offset_results = []
+# offset_results.append((ref_clip, 0)) # one of the clips has no offset
 
-offset = find_sound_offset(comparison_clip_name)
-# gets no. secs the comp clip is ahead of the ref clip
-offset_results.append((comparison_clip, str(offset)[2:-3])) # offset in seconds
-# (did some formatting here to get the offset from b'0.23464366914074475\n to 0.23464366914074475)
+# offset = find_sound_offset(comparison_clip_name)
+# # gets no. secs the comp clip is ahead of the ref clip
+# offset_results.append((comparison_clip, str(offset)[2:-3])) # offset in seconds
+# # (did some formatting here to get the offset from b'0.23464366914074475\n to 0.23464366914074475)
 
-final_comparison_clips = trim_clips(comparison_clip, offset_results)
-
-# --------------------------------------------------------- MAIN --------------------------------------------------------------------------------------
-
-
-# processing our two dancers
-print(f"model: {final_comparison_clips[0]}, comparision: {final_comparison_clips[1]} \n")
-xy_dancer1, dancer1_frames, dancer1_landmarks = landmarks(final_comparison_clips[0])
-xy_dancer2, dancer2_frames, dancer2_landmarks = landmarks(final_comparison_clips[1])
-
-score = difference(xy_dancer1, xy_dancer2, dancer1_frames, dancer2_frames, dancer1_landmarks, dancer2_landmarks)
-print(f"\n You are {score:.2f} % in sync with your model dancer!")
+# final_comparison_clips = trim_clips(comparison_clip, offset_results)
+# print(comparison_clip, offset_results)
+# #final_comparison_clips = ['chuu.mov', 'cyvescut.nov']
+# # --------------------------------------------------------- MAIN --------------------------------------------------------------------------------------
 
 
-remove_final_videos()
+# # processing our two dancers
+# print(f"model: {final_comparison_clips[0]}, comparision: {final_comparison_clips[1]} \n")
+# xy_dancer1, dancer1_frames, dancer1_landmarks = landmarks(final_comparison_clips[0])
+# xy_dancer2, dancer2_frames, dancer2_landmarks = landmarks(final_comparison_clips[1])
+
+# score = difference(xy_dancer1, xy_dancer2, dancer1_frames, dancer2_frames, dancer1_landmarks, dancer2_landmarks)
+# print(f"\n You are {score:.2f} % in sync with your model dancer!")
+
+
+# remove_final_videos()
