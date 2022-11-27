@@ -144,16 +144,11 @@ def convert_to_same_framerate(clip_list):
 
 
 
-def choose_reference_clip(clip_list):
-    # IMPORTANT: reference clip is longer than comparison clip
-    if get_frame_count(clip_list[0])[1] > get_frame_count(clip_list[1])[1]: # determine ref and comparison
-        ref_clip = clip_list[0]
-        comparison_clip = clip_list[1]
-    else:
-        ref_clip = clip_list[1]
-        comparison_clip = clip_list[0]
-
-    return ref_clip, comparison_clip
+def validate_reference_clip(ref_clip, comparison_clip):
+    "validate reference clip is longer than comparison clip"
+    if not (get_frame_count(ref_clip) > get_frame_count(comparison_clip)): 
+        print(f"Reference clip {ref_clip} has to be longer than comparision clip {comparison_clip}")
+        sys.exit(-1)
 
 
 def convert_to_wav(ref_clip, comparison_clip):
@@ -233,10 +228,10 @@ comparison_clip = sys.argv[2]
 print(f"intial clips {ref_clip} {comparison_clip}")
 convert_to_same_framerate([ref_clip, comparison_clip])
 
-# get reference clip
-# ref_clip, comparison_clip = choose_reference_clip(clip_list)
-# comparison_clip_name = comparison_clip.split(".")[0] # save the name of comparison clip for future use
-# print(f'this is the ref: {ref_clip} and comp: {comparison_clip}')
+# validate reference clip
+print(f'this is the ref: {ref_clip} and comp: {comparison_clip}')
+validate_reference_clip(ref_clip, comparison_clip)
+
 
 # # convert to wav for audio analysis
 # convert_to_wav(ref_clip, comparison_clip)
