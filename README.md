@@ -10,6 +10,9 @@ You will get a comparison video, with alerts where you are not in sync and a fin
 
 [<img src="https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png" width="600"/>](https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png) <br />
 
+## Quickstart
+[Go to the Executing section](### Executing)
+
 Happy dancing! <br />
 
 ## How does it work?
@@ -61,7 +64,9 @@ Have these installed these before running:
 * Ffmpeg https://ffmpeg.org/download.html <br />
 
 ### Executing
-Download the folder and run the main python file called **'dance.py'**. Make sure the videos are in **.mov** format and are the same dimension i.e. 1280x720 px
+- Download the folder <br />
+- Launch with these arguments: **python dance.py video/chuu.mov video/cyves.mov** <br />
+- Make sure the videos are in **.mov** format and are the same dimension i.e. 1280x720 px <br />
 
 ## Acknowledgments
 * Inspiration: https://www.youtube.com/watch?v=zxhXj72WClE
