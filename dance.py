@@ -234,8 +234,6 @@ offset = find_sound_offset(comparison_clip_name)
 offset_results.append((comparison_clip, str(offset)[2:-3])) # offset in seconds
 # (did some formatting here to get the offset from b'0.23464366914074475\n to 0.23464366914074475)
 
-print(f"What the heck:{comparison_clip_name} and the results {offset_results}")
-
 final_comparison_clips = trim_clips(comparison_clip, offset_results)
 
 # --------------------------------------------------------- MAIN --------------------------------------------------------------------------------------
