@@ -136,15 +136,13 @@ def extract_clip_name(path):
     "extract file name from the path, excluding file extension"
     return path.split('/')[-1].split(".")[0]
 
-def convert_to_same_framerate(clip_list):
-    # find all video clips in directory
-    for clip in clip_list:
-        # convert to 24fps
-        clip_name = extract_clip_name(clip) + "_24"
-        command = f"ffmpeg {EXIST_FLAG} -i {clip} -filter:v fps=24 {OUTPUT_DIR}/{clip_name}.mov"
-        os.system(command)
-
-
+def convert_to_same_framerate(clip):
+    "convert to 24p"
+    clip_24 = f"{OUTPUT_DIR}/{extract_clip_name(clip) + '_24'}.mov"
+    os.system(f"ffmpeg {EXIST_FLAG} -i {clip} -filter:v fps=24 {clip_24}")
+    return ref_clip
+    
+ 
 
 def validate_reference_clip(ref_clip, comparison_clip):
     "validate reference clip is longer than comparison clip"
@@ -157,13 +155,13 @@ def validate_reference_clip(ref_clip, comparison_clip):
 
 def convert_to_wav(ref_clip, comparison_clip):
     # Convert REFERENCE
-    command = "ffmpeg -i {0} ref.wav".format(ref_clip)
+    command = f"ffmpeg {EXIST_FLAG} -i {ref_clip} {OUTPUT_DIR}/{extract_clip_name(ref_clip)}.wav"
     os.system(command)
 
     # Convert COMPARISON
     # get the comparison clip name for future assignment
     comparison_clip_name = comparison_clip.split(".")[0]
-    command = "ffmpeg -i {0} {1}.wav".format(comparison_clip, comparison_clip_name)
+    command = f"ffmpeg {EXIST_FLAG} -i {comparison_clip} {OUTPUT_DIR}/{extract_clip_name(comparison_clip)}.wav"
     os.system(command)
 
 
@@ -230,7 +228,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 ref_clip = sys.argv[1]
 comparison_clip = sys.argv[2]
 print(f"intial clips {ref_clip} {comparison_clip}")
-convert_to_same_framerate([ref_clip, comparison_clip])
+ref_clip_24, comparison_clip_24 = convert_to_same_framerate(ref_clip), convert_to_same_framerate(comparison_clip)
 
 # validate reference clip
 print(f'this is the ref: {ref_clip} and comp: {comparison_clip}')
@@ -238,7 +236,7 @@ validate_reference_clip(ref_clip, comparison_clip)
 
 
 # # convert to wav for audio analysis
-# convert_to_wav(ref_clip, comparison_clip)
+convert_to_wav(ref_clip, comparison_clip)
 
 # # set up offset results & find offset for comparison clip
 # offset_results = []
