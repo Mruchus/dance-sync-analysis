@@ -78,7 +78,7 @@ def difference(xy1, xy2, frames1, frames2, landmarks1, landmarks): # x and y pos
 
     print("Analysing dancers...")
     #writing our final video
-    video = VideoWriter('output.mp4', VideoWriter_fourcc(*'mp4v'), 24.0, (2*720, 1280), isColor=True)
+    video = VideoWriter(f'{OUTPUT_DIR}/output.mp4', VideoWriter_fourcc(*'mp4v'), 24.0, (2*720, 1280), isColor=True)
 
     for f in range(num_of_frames): # f = frame number
 
@@ -231,13 +231,13 @@ ref_cut, comparison_cut = trim_clips(ref_clip_24, comparison_clip_24, offset)
 print(ref_cut, comparison_cut)
 # # --------------------------------------------------------- MAIN --------------------------------------------------------------------------------------
 
-# # processing our two dancers
-# print(f"model: {final_comparison_clips[0]}, comparision: {final_comparison_clips[1]} \n")
-# xy_dancer1, dancer1_frames, dancer1_landmarks = landmarks(final_comparison_clips[0])
-# xy_dancer2, dancer2_frames, dancer2_landmarks = landmarks(final_comparison_clips[1])
+# processing our two dancers
+print(f"model: {ref_cut}, comparision: {comparison_cut} \n")
+xy_dancer1, dancer1_frames, dancer1_landmarks = landmarks(ref_cut)
+xy_dancer2, dancer2_frames, dancer2_landmarks = landmarks(comparison_cut)
 
-# score = difference(xy_dancer1, xy_dancer2, dancer1_frames, dancer2_frames, dancer1_landmarks, dancer2_landmarks)
-# print(f"\n You are {score:.2f} % in sync with your model dancer!")
+score = difference(xy_dancer1, xy_dancer2, dancer1_frames, dancer2_frames, dancer1_landmarks, dancer2_landmarks)
+print(f"\n You are {score:.2f} % in sync with your model dancer!")
 
 
 # remove_final_videos()
