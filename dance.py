@@ -9,6 +9,7 @@ from statistics import mean
 import numpy as np
 
 OUTPUT_DIR="output"
+EXIST_FLAG="-n" # ignore existing file, change to -y to always overwrite
 
 # --------------------------------------------------------- VIDEO PROCESSING --------------------------------------------------------------------------------------
 
@@ -140,7 +141,7 @@ def convert_to_same_framerate(clip_list):
     for clip in clip_list:
         # convert to 24fps
         clip_name = extract_clip_name(clip) + "_24"
-        command = f"ffmpeg -i {clip} -filter:v fps=24 {OUTPUT_DIR}/{clip_name}.mov"
+        command = f"ffmpeg {EXIST_FLAG} -i {clip} -filter:v fps=24 {OUTPUT_DIR}/{clip_name}.mov"
         os.system(command)
 
 
