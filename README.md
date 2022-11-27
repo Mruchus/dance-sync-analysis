@@ -11,7 +11,7 @@ You will get a comparison video, with alerts where you are not in sync and a fin
 [<img src="https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png" width="600"/>](https://github.com/Mruchus/dance-sync-analysis/blob/main/finalscoresample.png) <br />
 
 ## Quickstart
-[Go to the Executing section](### Executing)
+[Go to the Executing section](#Executing)
 
 Happy dancing! <br />
 
