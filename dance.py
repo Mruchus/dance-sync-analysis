@@ -24,6 +24,7 @@ def get_duration(filename): # returns the duration of a clip
 
 
 def get_frame_count(filename): #returns the number of frames in a clip
+    "return tuple of (captured video, frame count)"
     captured_video = cv2.VideoCapture(filename)
 
     frame_count = int(math.floor(captured_video.get(cv2.CAP_PROP_FRAME_COUNT)))
@@ -146,7 +147,9 @@ def convert_to_same_framerate(clip_list):
 
 def validate_reference_clip(ref_clip, comparison_clip):
     "validate reference clip is longer than comparison clip"
-    if not (get_frame_count(ref_clip) > get_frame_count(comparison_clip)): 
+    _, ref_clip_frame_count = get_frame_count(ref_clip)
+    _, comparision_clip_frame_count = get_frame_count(comparison_clip)
+    if not (ref_clip_frame_count > comparision_clip_frame_count): 
         print(f"Reference clip {ref_clip} has to be longer than comparision clip {comparison_clip}")
         sys.exit(-1)
 
@@ -221,7 +224,7 @@ import sys
 
 
 #create output dir
-os.makedirs(OUTPUT_DIR)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 ref_clip = sys.argv[1]
 comparison_clip = sys.argv[2]
