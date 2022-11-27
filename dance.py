@@ -211,26 +211,36 @@ import sys
 #create output dir
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+if len(sys.argv) < 3:
+    print(f"Usage:\n {sys.argv[0]} <ref_clip> <comparison_clip>")
+    sys.exit(-1)
+
 ref_clip = sys.argv[1]
 comparison_clip = sys.argv[2]
-print(f"intial clips {ref_clip} {comparison_clip}")
-ref_clip_24, comparison_clip_24 = convert_to_same_framerate(ref_clip), convert_to_same_framerate(comparison_clip)
 
-# validate reference clip
-print(f'this is the ref: {ref_clip} and comp: {comparison_clip}')
-validate_reference_clip(ref_clip, comparison_clip)
+# FULL COMPARE
+if not (len(sys.argv)>3 and sys.argv[3] == '--compare-only'):
+    print(f"intial clips {ref_clip} {comparison_clip}")
+    ref_clip_24, comparison_clip_24 = convert_to_same_framerate(ref_clip), convert_to_same_framerate(comparison_clip)
+
+    # validate reference clip
+    print(f'this is the ref: {ref_clip} and comp: {comparison_clip}')
+    validate_reference_clip(ref_clip, comparison_clip)
 
 
-# # convert to wav for audio analysis
-ref_clip_wav, comparison_clip_wav = convert_to_wav(ref_clip), convert_to_wav(comparison_clip)
+    # # convert to wav for audio analysis
+    ref_clip_wav, comparison_clip_wav = convert_to_wav(ref_clip), convert_to_wav(comparison_clip)
 
-offset = find_sound_offset(ref_clip_wav, comparison_clip_wav)
-# gets no. secs the comp clip is ahead of the ref clip
+    offset = find_sound_offset(ref_clip_wav, comparison_clip_wav)
+    # gets no. secs the comp clip is ahead of the ref clip
 
-ref_cut, comparison_cut = trim_clips(ref_clip_24, comparison_clip_24, offset)
-print(ref_cut, comparison_cut)
+    ref_cut, comparison_cut = trim_clips(ref_clip_24, comparison_clip_24, offset)
+    print(ref_cut, comparison_cut)
 # # --------------------------------------------------------- MAIN --------------------------------------------------------------------------------------
-
+else:
+    ref_cut = sys.argv[1]
+    comparison_cut = sys.argv[2]
+    
 # processing our two dancers
 print(f"model: {ref_cut}, comparision: {comparison_cut} \n")
 xy_dancer1, dancer1_frames, dancer1_landmarks = landmarks(ref_cut)
