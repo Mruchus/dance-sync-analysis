@@ -18,17 +18,17 @@ Happy dancing! <br />
 ## How does it work?
 
 ### 1. How do we compare the dancers?
-We compare the gradients of their limbs i.e. the **angle** of their arms, legs, torso etc... <br />
+We compare the **angles** of the dancers' arms, legs, torso etc... <br />
 
 1. Use a Pose Estimation Model to find the postions of a dancer's joints <br />
 
 2. For the limbs we want to compare, find the corresponding joint postions <br />
 
-3. Compute **gradient** using (x,y) coordinates of joints <br />
+3. Compute **angle** using (x,y) coordinates of joints and some trig<br />
 
 [<img src="https://github.com/Mruchus/dance-sync-analysis/blob/6483c792c91f5f57239243693b56d3315a2532a6/gradientEXPLAIN.png" width="600"/>](https://github.com/Mruchus/dance-sync-analysis/blob/6483c792c91f5f57239243693b56d3315a2532a6/gradientEXPLAIN.png) <br />
 
-4. Find percentage difference between the limb's gradient of dancer1 and dancer2. Repeat and average for ALL limbs in once frame. Repeat for all frames <br />
+4. Find difference between the limb's gradient (i.e. angle) of dancer1 and dancer2. Repeat and average for ALL limbs in once frame. Repeat for all frames <br />
 
 ### 2. What happens if we input videos of different lengths?
 There may be a case where the dance **song starts a little bit later** in one video. This is not a problem as the program automatically syncs the two dancers so comparisons only happen when they are dancing to the same part of the song! <br />
