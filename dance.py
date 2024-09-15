@@ -5,6 +5,13 @@ from enum import Enum
 from statistics import mean
 from typing import List, Tuple
 
+from datetime import datetime
+
+from composio_crewai import App, ComposioToolSet
+from crewai import Agent, Task, Crew
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -50,6 +57,47 @@ LIMB_CONNECTIONS = [
     (PoseLandmark.RIGHT_SHOULDER, PoseLandmark.RIGHT_HIP),
 ]
 
+
+# Create and Execute Agent.
+def followup_event():
+
+    # Initialize the language model
+    llm = ChatOpenAI(model="gpt-4o")
+
+    # Define tools for the agents
+    # We are using Google calendar tool from composio to connect to our calendar account.
+    composio_toolset = ComposioToolSet()
+    tools = composio_toolset.get_tools(apps=[App.GOOGLECALENDAR])
+
+    # Retrieve the current date and time
+    date = datetime.today().strftime("%Y-%m-%d+1")
+    timezone = datetime.now().astimezone().tzinfo
+
+    # Setup Todo
+    followup = """
+    6PM - 7PM -> Meeting for dance recital followup,
+    10:30PM - 11PM -> Dance Practice,
+    8PM - 10PM -> Dinner with promoter
+    """
+    calendar_agent = Agent(
+        role="Google Calendar Agent",
+        goal="""You take action on Google Calendar using Google Calendar APIs""",
+        backstory="""You are an AI agent responsible for taking actions on Google Calendar on users' behalf. 
+        You need to take action on Calendar using Google Calendar APIs. Use correct tools to run APIs from the given tool-set.""",
+        verbose=True,
+        tools=tools,
+        llm=llm,
+        cache=False,
+    )
+    task = Task(
+        description=f"Book slots according to {followup}. Label them with the work provided to be done in that time period. Schedule it for today. Today's date is {date} (it's in YYYY-MM-DD format) and make the timezone be {timezone}.",
+        agent=calendar_agent,
+        expected_output="if free slot is found",
+    )
+    crew = Crew(agents=[calendar_agent], tasks=[task])
+    result = crew.kickoff()
+    print(result)
+    return "Crew run initiated", 200
 
 def get_video_duration(filename: str) -> float:
     """Returns the duration of a video clip in seconds."""
@@ -161,6 +209,9 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
     print("Analyzing dancers...")
     video_writer = cv2.VideoWriter(f'{OUTPUT_DIR}/output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), FPS, (2 * 720, 1280))
 
+    # Define colors to flash through
+    colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+
     for frame_idx in range(num_frames):
         frame_diffs = [abs(ref_angles[frame_idx][j] - comp_angles[frame_idx][j]) / 180 for j in range(len(LIMB_CONNECTIONS))]
         frame_diff = mean(frame_diffs)
@@ -185,6 +236,25 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
         score = ((frame_idx + 1 - out_of_sync_frames) / (frame_idx + 1)) * 100.0
         cv2.putText(display, f"Score: {score:.2f}%", (ref_frame.shape[1] + 40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
 
+        # --- Added: Center the "MindsDB Agents Hackathon LFG!!!" text and flash different colors ---
+        text = "MindsDB Agents Hackathon LFG!!!"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1.5
+        thickness = 3
+        text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+
+        # Calculate the center position
+        text_x = (display.shape[1] - text_size[0]) // 2   # x-coordinate for centering
+        text_y = (display.shape[0] * 7 // 8)  # Moves the text 50% lower
+
+
+        # Pick a color based on the frame index (modulo to cycle through colors)
+        flashing_color = colors[frame_idx % len(colors)]  # --- Change: Cycle through colors ---
+
+        # Put the text at the center of the frame with the flashing color
+        cv2.putText(display, text, (text_x, text_y), font, font_scale, flashing_color, thickness)  # --- Change: Use flashing_color ---
+
+        # Show the display and write it to the output video
         cv2.imshow(str(frame_idx), display)
         video_writer.write(display)
         cv2.waitKey(1)
@@ -192,39 +262,34 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
     video_writer.release()
 
     # Calculate average limb difference for each 5-second window
-    frame_rate = int(FPS)  # Ensure frame_rate is an integer
-    window_size = int(5 * frame_rate)  # Ensure window_size is an integer
+    frame_rate = int(FPS)
+    window_size = int(5 * frame_rate)
     window_errors = []
 
     for start_idx in range(0, num_frames, window_size):
         end_idx = min(start_idx + window_size, num_frames)
         window_diff = [frame_errors[idx] for idx in range(start_idx, end_idx)]
         avg_window_diff = mean(window_diff)
-        
-        # Convert frame indices to time (in seconds)
+
         start_time = start_idx / frame_rate
         end_time = end_idx / frame_rate
-        
+
         window_errors.append((start_time, end_time, avg_window_diff))
 
-    # Sort by average difference in descending order
     sorted_windows = sorted(window_errors, key=lambda x: x[2], reverse=True)
 
-    # Display top 5 worst 5-second windows
     print("\n5-Second Time Ranges with the Most Errors:")
     for start_time, end_time, avg_diff in sorted_windows[:5]:
-        print(f"Time: {start_time:.2f}s - {end_time:.2f}s: {avg_diff:.2f} degrees difference on average")
+        print(f"Range {start_time:.2f}s - {end_time:.2f}s: {avg_diff:.2f} degrees difference on average")
 
-    # Generate detailed feedback after video processing
     feedback_summary = generate_feedback_summary(ref_angles, comp_angles)
     print("\nDetailed Feedback:")
     for limb, avg_diff in feedback_summary.items():
         print(f"{limb}: {avg_diff:.2f} degrees difference on average")
 
+        
+
     return score
-
-
-
 
 
 def convert_to_same_framerate(clip: str) -> str:
@@ -309,6 +374,9 @@ def main(ref_clip: str, comparison_clip: str, compare_only: bool = False):
 
     print(f"\nYou are {score:.2f}% in sync with your model dancer!")
 
+    if score < 70:
+            followup_event()
+
 
 if __name__ == "__main__":
     import sys
@@ -324,3 +392,5 @@ if __name__ == "__main__":
     compare_only = len(sys.argv) > 3 and sys.argv[3] == '--compare-only'
 
     main(ref_clip, comparison_clip, compare_only)
+
+
