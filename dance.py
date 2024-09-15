@@ -92,6 +92,19 @@ def extract_landmarks(video_path: str) -> Tuple[List[List[Tuple[float, float]]],
 
     return xy_landmark_coords, frames, landmarks
 
+def generate_feedback_summary(ref_angles: List[List[float]], comp_angles: List[List[float]]):
+    """Generates a summary of feedback on limb angles for all frames."""
+    feedback_summary = {}
+    num_frames = len(ref_angles)
+    
+    for limb_idx, (start, end) in enumerate(LIMB_CONNECTIONS):
+        diffs = [abs(ref_angles[frame_idx][limb_idx] - comp_angles[frame_idx][limb_idx]) 
+                 for frame_idx in range(num_frames)]
+        avg_diff = mean(diffs)
+        feedback_summary[f"Limb {start.name} to {end.name}"] = avg_diff
+
+    return feedback_summary
+
 
 def calculate_limb_angles(frame_landmarks: List[List[Tuple[float, float]]]) -> List[List[float]]:
     """Calculates limb angles for each frame."""
@@ -142,10 +155,14 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
     out_of_sync_frames = 0
     score = 100.0
 
+    # Dictionary to store frame indices and their average differences
+    frame_errors = {}
+
     print("Analysing dancers...")
     video_writer = cv2.VideoWriter(f'{OUTPUT_DIR}/output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), FPS, (2 * 720, 1280))
 
-    for frame_idx in range(num_frames):
+    for frame_idx in range(num_frames): #Edited to add capturing errors and percentages for limbs and frames to recommend improvements.
+
         # difference in angle for each limb
         frame_diffs = [abs(ref_angles[frame_idx][j] - comp_angles[frame_idx][j]) / 180 for j in
                        range(len(LIMB_CONNECTIONS))]
@@ -175,6 +192,21 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
         cv2.imshow(str(frame_idx), display)
         video_writer.write(display)
         cv2.waitKey(1)
+
+
+            # Generate detailed feedback after video processing
+    feedback_summary = generate_feedback_summary(ref_angles, comp_angles)
+    print("\nDetailed Feedback:")
+    for limb, avg_diff in feedback_summary.items():
+        print(f"{limb}: {avg_diff:.2f} degrees difference on average")
+
+    # Identify frames with the most errors
+    sorted_frames = sorted(frame_errors.items(), key=lambda x: x[1], reverse=True)
+    top_frames = sorted_frames[:5]  # Display top 5 frames with most errors
+    
+    print("\nFrames with the Most Errors:")
+    for idx, error in top_frames:
+        print(f"Frame {idx}: {error:.2f} degrees difference")
 
     video_writer.release()
     return score
