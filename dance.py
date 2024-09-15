@@ -158,58 +158,73 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
     # Dictionary to store frame indices and their average differences
     frame_errors = {}
 
-    print("Analysing dancers...")
+    print("Analyzing dancers...")
     video_writer = cv2.VideoWriter(f'{OUTPUT_DIR}/output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), FPS, (2 * 720, 1280))
 
-    for frame_idx in range(num_frames): #Edited to add capturing errors and percentages for limbs and frames to recommend improvements.
-
-        # difference in angle for each limb
-        frame_diffs = [abs(ref_angles[frame_idx][j] - comp_angles[frame_idx][j]) / 180 for j in
-                       range(len(LIMB_CONNECTIONS))]
+    for frame_idx in range(num_frames):
+        frame_diffs = [abs(ref_angles[frame_idx][j] - comp_angles[frame_idx][j]) / 180 for j in range(len(LIMB_CONNECTIONS))]
         frame_diff = mean(frame_diffs)
+
+        # Store the frame index and its average difference
+        frame_errors[frame_idx] = frame_diff
 
         ref_frame = ref_frames[frame_idx]
         comp_frame = comp_frames[frame_idx]
 
-        # annotation skeleton and score on the frame
         mp_draw.draw_landmarks(ref_frame, ref_pose_results[frame_idx].pose_landmarks, mp_pose.POSE_CONNECTIONS)
         mp_draw.draw_landmarks(comp_frame, comp_pose_results[frame_idx].pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
         display = np.concatenate((ref_frame, comp_frame), axis=1)
 
         color = (0, 0, 255) if frame_diff > SYNC_THRESHOLD else (255, 0, 0)
-
         cv2.putText(display, f"Diff: {frame_diff:.2f}", (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
 
-        # determine if synced
         if frame_diff > SYNC_THRESHOLD:
             out_of_sync_frames += 1
 
         score = ((frame_idx + 1 - out_of_sync_frames) / (frame_idx + 1)) * 100.0
-        cv2.putText(display, f"Score: {score:.2f}%", (ref_frame.shape[1] + 40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color,
-                    3)
+        cv2.putText(display, f"Score: {score:.2f}%", (ref_frame.shape[1] + 40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
 
         cv2.imshow(str(frame_idx), display)
         video_writer.write(display)
         cv2.waitKey(1)
 
+    video_writer.release()
 
-            # Generate detailed feedback after video processing
+    # Calculate average limb difference for each 5-second window
+    frame_rate = int(FPS)  # Ensure frame_rate is an integer
+    window_size = int(5 * frame_rate)  # Ensure window_size is an integer
+    window_errors = []
+
+    for start_idx in range(0, num_frames, window_size):
+        end_idx = min(start_idx + window_size, num_frames)
+        window_diff = [frame_errors[idx] for idx in range(start_idx, end_idx)]
+        avg_window_diff = mean(window_diff)
+        
+        # Convert frame indices to time (in seconds)
+        start_time = start_idx / frame_rate
+        end_time = end_idx / frame_rate
+        
+        window_errors.append((start_time, end_time, avg_window_diff))
+
+    # Sort by average difference in descending order
+    sorted_windows = sorted(window_errors, key=lambda x: x[2], reverse=True)
+
+    # Display top 5 worst 5-second windows
+    print("\n5-Second Time Ranges with the Most Errors:")
+    for start_time, end_time, avg_diff in sorted_windows[:5]:
+        print(f"Time: {start_time:.2f}s - {end_time:.2f}s: {avg_diff:.2f} degrees difference on average")
+
+    # Generate detailed feedback after video processing
     feedback_summary = generate_feedback_summary(ref_angles, comp_angles)
     print("\nDetailed Feedback:")
     for limb, avg_diff in feedback_summary.items():
         print(f"{limb}: {avg_diff:.2f} degrees difference on average")
 
-    # Identify frames with the most errors
-    sorted_frames = sorted(frame_errors.items(), key=lambda x: x[1], reverse=True)
-    top_frames = sorted_frames[:5]  # Display top 5 frames with most errors
-    
-    print("\nFrames with the Most Errors:")
-    for idx, error in top_frames:
-        print(f"Frame {idx}: {error:.2f} degrees difference")
-
-    video_writer.release()
     return score
+
+
+
 
 
 def convert_to_same_framerate(clip: str) -> str:
