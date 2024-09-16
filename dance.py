@@ -7,6 +7,8 @@ from typing import List, Tuple
 
 from datetime import datetime
 
+from together import Together
+
 from composio_crewai import App, ComposioToolSet
 from crewai import Agent, Task, Crew
 from dotenv import load_dotenv
@@ -27,6 +29,9 @@ SYNC_THRESHOLD = 0.15 # would allow for 180 * 0.15 = 27 degrees off
 mp_draw = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
+# Initialize variables to keep track of the highest average difference and corresponding limb
+max_diff = None #-float('inf')
+max_limb = None
 
 class PoseLandmark(Enum):
     NOSE = 0
@@ -76,8 +81,7 @@ def followup_event():
     # Setup Todo
     followup = """
     6PM - 7PM -> Meeting for dance recital followup,
-    10:30PM - 11PM -> Dance Practice,
-    8PM - 10PM -> Dinner with promoter
+    10:30PM - 11PM -> Dance Practice
     """
     calendar_agent = Agent(
         role="Google Calendar Agent",
@@ -193,6 +197,10 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
                     ref_pose_results: List,
                     comp_pose_results: List) -> float:
     """Compares two dancers and returns a synchronization score."""
+
+    #global variables
+
+    global max_diff, max_limb
     # get number of comparable frames
     num_frames = min(len(ref_landmarks), len(comp_landmarks))
 
@@ -284,12 +292,17 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
 
     feedback_summary = generate_feedback_summary(ref_angles, comp_angles)
     print("\nDetailed Feedback:")
+
     for limb, avg_diff in feedback_summary.items():
         print(f"{limb}: {avg_diff:.2f} degrees difference on average")
 
+        if max_diff is None or avg_diff > max_diff:
+            max_diff = avg_diff
+            max_limb = limb
+
         
 
-    return score
+    return score, max_diff, max_limb
 
 
 def convert_to_same_framerate(clip: str) -> str:
@@ -340,7 +353,6 @@ def trim_clips(ref_clip: str, comparison_clip: str, offset: float) -> Tuple[str,
 
     return ref_cut, comp_cut
 
-
 def main(ref_clip: str, comparison_clip: str, compare_only: bool = False):
     # ensure output directory exists
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -370,12 +382,54 @@ def main(ref_clip: str, comparison_clip: str, compare_only: bool = False):
     comp_landmarks, comp_frames, comp_pose_results = extract_landmarks(comp_cut)
 
     # compare
-    score = compare_dancers(ref_landmarks, comp_landmarks, ref_frames, comp_frames, ref_pose_results, comp_pose_results)
+    score, max_diff, max_limb = compare_dancers(ref_landmarks, comp_landmarks, ref_frames, comp_frames, ref_pose_results, comp_pose_results)
 
     print(f"\nYou are {score:.2f}% in sync with your model dancer!")
 
-    if score < 70:
+    
+
+    if score < 60:
+            prompt = f"What are some ways to improve my dance move accuracy since I have an accuracy of {score:.2f}%? Mention the limb with the highest average difference is {max_limb} with an average difference of {max_diff:.2f} degrees. Please make sure to mention my score, my style of dance which are Boogalo and Funk, and include a brief history of each dance style."
+            # Print the values to verify they are returned correctly
+            print(f"Score: {score:.2f}")
+            print(f"Limb with highest average difference: {max_limb}")
+            print(f"Average difference for the limb: {max_diff:.2f}")
+            print(prompt)
+            # Call AI agent to add followup dance practice events to improve
             followup_event()
+            client = Together(api_key=os.environ.get("34433f9db54ef4d633660b7961f354a8e6a6ee1094d366dad96c16ffe8558cd0"))
+            # Create a streaming completion request
+            stream = client.chat.completions.create(
+                model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+                messages=[{"role": "user", "content": prompt}],
+                stream=True,
+            )
+
+            for chunk in stream:
+                print(chunk.choices[0].delta.content or "", end="", flush=True)
+
+    else:
+            prompt = f"Say congratulations and we are ready to start promoting your video, mention the score {score:.2f}%? Mention the limb with the highest average difference is {max_limb} with an average difference of {max_diff:.2f} degrees. Please make sure to mention my score, my style of dance which are Boogalo and Funk, and include a brief history of each dance style. you could also try a similar dance style like waving next. You could try roboting as well. Mention all this."
+            print(f"Score: {score:.2f}")
+            print(f"Limb with highest average difference: {max_limb}")
+            print(f"Average difference for the limb: {max_diff:.2f}")
+            print(f"Great job at being above 60%")
+            print(prompt)
+            # Call AI agent to add followup dance practice events to improve
+            followup_event()
+            client = Together(api_key=os.environ.get("34433f9db54ef4d633660b7961f354a8e6a6ee1094d366dad96c16ffe8558cd0"))
+            # Create a streaming completion request
+            stream = client.chat.completions.create(
+                model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+                messages=[{"role": "user", "content": prompt}],
+                stream=True,
+            )
+
+            for chunk in stream:
+                print(chunk.choices[0].delta.content or "", end="", flush=True)
+
+
+
 
 
 if __name__ == "__main__":
