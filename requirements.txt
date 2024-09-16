@@ -1,2 +1,2 @@
-mediapipe-silicon==0.8.11
+mediapipe-silicon==0.9.0.1
 opencv-python==4.6.0.66
