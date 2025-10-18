@@ -50,6 +50,11 @@ We sync the dancers using the music! Both dancers are dancing to the same music 
 
 ![](https://github.com/Mruchus/dance-sync-analysis/blob/65e7469d1b7e8d42438a568b58fddfc50054b2ec/syncExplain2.JPG)
 
+## Latest Update! 10-2025
+Now available as a web interface:
+
+![](https://github.com/Mruchus/dance-sync-analysis/blob/main/web_interface.png)
+
 ## Want to try it out?
 
 I am working on making this accessible for everyone: **non-programmers included!** Unfortunately, I'm not quite there yet so you will need to install a bunch of packages (sorry!) and run the code on **macOS 12.5.1**. <br />
