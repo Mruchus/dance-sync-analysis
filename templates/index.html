@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dance Sync Analyser</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&family=Funnel+Display:wght@300..800&family=Michroma&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "Funnel Display", sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            color: #ffffff;
+            font-weight: 600;
+            font-family: "Doto", sans-serif;
+        }
+        
+        .header p {
+            font-size: 1em;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .upload-box {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-box:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .upload-box.active {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .upload-box input[type="file"] {
+            display: none;
+        }
+        
+        .upload-box h3 {
+            color: #ffffff;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        
+        .upload-box p {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9em;
+        }
+        
+        .file-name {
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+            margin-top: 10px;
+            word-break: break-word;
+        }
+        
+        .analyze-btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .analyze-btn:hover:not(:disabled) {
+            background: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+        
+        .analyze-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .progress-section {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .progress-section.active {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .progress-text {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9em;
+        }
+        
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .result-section.active {
+            display: block;
+        }
+        
+        .score-display {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-family: "Doto", sans-serif;
+        }
+        
+        .score-display h2 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: normal;
+            font-family: "Funnel Display", sans-serif;
+        }
+        
+        .score-number {
+            font-size: 4em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+        
+        .score-message {
+            font-size: 1em;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .video-container {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .video-container video {
+            width: 100%;
+            display: block;
+        }
+        
+        .download-btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            font-family: "Funnel Display", sans-serif;
+        }
+        
+        .download-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .error-message {
+            background: rgba(255, 100, 100, 0.1);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            color: rgba(255, 150, 150, 1);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            display: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .error-message.active {
+            display: block;
+        }
+
+        .text-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-image: url('/static/text-background.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0.2;
+            animation: float-bg 30s linear infinite;
+        }
+
+        @keyframes float-bg {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-100px);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .upload-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .score-number {
+                font-size: 3em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="text-background"></div>
+    <div class="container">
+        <div class="header">
+            <h1>Dance Sync Analyser</h1>
+            <p>Compare two dancers and calculate their synchronisation score</p>
+        </div>
+        
+        <div class="card">
+            <form id="uploadForm">
+                <div class="upload-section">
+                    <div class="upload-box" id="refBox" onclick="document.getElementById('refFile').click()">
+                        <h3>Reference Video</h3>
+                        <p>The original dancer you want to match</p>
+                        <p style="margin-top: 8px; font-size: 0.7em; color: rgba(118, 120, 217, 0.6);">Must be longer than your video</p>
+                        <p class="file-name" id="refFileName"></p>
+                        <input type="file" id="refFile" name="reference" accept="video/*" onchange="handleFileSelect('ref')">
+                    </div>
+
+                    <div class="upload-box" id="compBox" onclick="document.getElementById('compFile').click()">
+                        <h3>Your Video</h3>
+                        <p>Your attempt at the dance</p>
+                        <p style="margin-top: 8px; font-size: 0.7em; color: rgba(118, 120, 217, 0.6);">Must be shorter than reference</p>
+                        <p class="file-name" id="compFileName"></p>
+                        <input type="file" id="compFile" name="comparison" accept="video/*" onchange="handleFileSelect('comp')">
+                    </div>
+                </div>
+                
+                <button type="submit" class="analyze-btn" id="analyzeBtn" disabled>
+                    Analyse
+                </button>
+            </form>
+            
+            <div class="progress-section" id="progressSection">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-text" id="progressText">Processing...</p>
+            </div>
+            
+            <div class="error-message" id="errorMessage">
+                <div id="errorTitle" style="font-weight: 600; margin-bottom: 10px;"></div>
+                <div id="errorDetails" style="font-size: 0.85em; margin-top: 10px; font-family: 'Courier New', monospace; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; max-height: 300px; overflow-y: auto; display: none;"></div>
+            </div>
+            
+            <div class="result-section" id="resultSection">
+                <div class="score-display">
+                    <h2>Synchronisation Score</h2>
+                    <div class="score-number" id="scoreNumber">--</div>
+                    <div class="score-message" id="scoreMessage"></div>
+                </div>
+                
+                <div class="video-container">
+                    <video id="resultVideo" controls></video>
+                </div>
+                
+                <button class="download-btn" id="downloadBtn">
+                    Download Video
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let refFile = null;
+        let compFile = null;
+        let sessionId = null;
+        
+        function handleFileSelect(type) {
+            const file = type === 'ref' ? document.getElementById('refFile').files[0] : document.getElementById('compFile').files[0];
+            const fileNameEl = document.getElementById(type + 'FileName');
+            const box = document.getElementById(type + 'Box');
+            
+            if (file) {
+                fileNameEl.textContent = file.name;
+                box.classList.add('active');
+                
+                if (type === 'ref') refFile = file;
+                else compFile = file;
+                
+                document.getElementById('analyzeBtn').disabled = !(refFile && compFile);
+            }
+        }
+        
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('reference', refFile);
+            formData.append('comparison', compFile);
+            
+            document.getElementById('progressSection').classList.add('active');
+            document.getElementById('resultSection').classList.remove('active');
+            document.getElementById('errorMessage').classList.remove('active');
+            document.getElementById('analyzeBtn').disabled = true;
+            
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress = Math.min(progress + 1, 90);
+                document.getElementById('progressFill').style.width = progress + '%';
+            }, 1000);
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                clearInterval(progressInterval);
+                document.getElementById('progressFill').style.width = '100%';
+                
+                const result = await response.json();
+
+                if (!response.ok) {
+                    // Show error with details
+                    const errorMessageDiv = document.getElementById('errorMessage');
+                    const errorTitle = document.getElementById('errorTitle');
+                    const errorDetails = document.getElementById('errorDetails');
+                    
+                    errorTitle.textContent = result.error || 'Processing failed';
+                    
+                    if (result.details) {
+                        errorDetails.textContent = result.details;
+                        errorDetails.style.display = 'block';
+                    }
+                    
+                    errorMessageDiv.classList.add('active');
+                    document.getElementById('progressSection').classList.remove('active');
+                    document.getElementById('analyzeBtn').disabled = false;
+                    return;
+                }
+
+                sessionId = result.session_id;
+                displayResults(result.score);
+                
+            } catch (error) {
+                clearInterval(progressInterval);
+                // display error
+                const errorMessageDiv = document.getElementById('errorMessage');
+                const errorTitle = document.getElementById('errorTitle');
+                const errorDetails = document.getElementById('errorDetails');
+                
+                errorTitle.textContent = error.message || 'Processing failed';
+                
+                // show detailed logs if available
+                if (result && result.details) {
+                    errorDetails.textContent = result.details;
+                    errorDetails.style.display = 'block';
+                }
+                
+                errorMessageDiv.classList.add('active');
+                document.getElementById('progressSection').classList.remove('active');
+                document.getElementById('analyzeBtn').disabled = false;
+            }
+        });
+        
+        function displayResults(score) {
+            document.getElementById('progressSection').classList.remove('active');
+            document.getElementById('resultSection').classList.add('active');
+            document.getElementById('analyzeBtn').disabled = false;
+            
+            const scoreEl = document.getElementById('scoreNumber');
+            let currentScore = 0;
+            const increment = score / 50;
+            const scoreInterval = setInterval(() => {
+                currentScore += increment;
+                if (currentScore >= score) {
+                    currentScore = score;
+                    clearInterval(scoreInterval);
+                }
+                scoreEl.textContent = currentScore.toFixed(2) + '%';
+            }, 20);
+            
+            const messageEl = document.getElementById('scoreMessage');
+            if (score >= 85) {
+                messageEl.textContent = 'Excellent synchronisation';
+            } else if (score >= 70) {
+                messageEl.textContent = 'Good synchronisation';
+            } else if (score >= 50){
+                messageEl.textContent = 'Moderate synchronisation';
+            } else {
+                messageEl.textContent = 'Synchronisation needs improvement';
+            }
+            
+            document.getElementById('resultVideo').src = '/video/' + sessionId;
+        }
+        
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            window.location.href = '/download/' + sessionId;
+        });
+    </script>
+</body>
+</html>

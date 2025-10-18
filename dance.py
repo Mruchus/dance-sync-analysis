@@ -1,6 +1,7 @@
 import os
 import subprocess
 import math
+import sys
 from enum import Enum
 from statistics import mean
 from typing import List, Tuple
@@ -9,12 +10,11 @@ import cv2
 import numpy as np
 import mediapipe as mp
 
-OUTPUT_DIR = "output"
-EXIST_FLAG = "-n"  # ignore existing file, change to -y to always overwrite
+EXIST_FLAG = "-y"  # overwrite existing files
 PRAAT_PATH = "/Applications/Praat.app/Contents/MacOS/Praat"
 SEARCH_INTERVAL = 30  # in secs
 FPS = 24.0
-SYNC_THRESHOLD = 0.15 # would allow for 180 * 0.15 = 27 degrees off
+SYNC_THRESHOLD = 0.18 # would allow for 180 * 0.18 = 32 degrees off
 
 # MediaPipe setup
 mp_draw = mp.solutions.drawing_utils
@@ -93,6 +93,11 @@ def extract_landmarks(video_path: str) -> Tuple[List[List[Tuple[float, float]]],
     return xy_landmark_coords, frames, landmarks
 
 
+def angular_difference(angle1, angle2):
+    diff = abs(angle1 - angle2)
+    return min(diff, 360 - diff)  # Take the shorter path around the circle
+
+
 def calculate_limb_angles(frame_landmarks: List[List[Tuple[float, float]]]) -> List[List[float]]:
     """Calculates limb angles for each frame."""
     frame_angles = []
@@ -110,11 +115,6 @@ def calculate_limb_angles(frame_landmarks: List[List[Tuple[float, float]]]) -> L
                 # arctan2 identifies sign (i.e. quadrant) + deals with zero values
                 angle = np.degrees(np.arctan2(dx, dy))
 
-                # normalize angle -> between 0 and 180 degrees
-                angle = abs(angle)
-                if angle > 180:
-                    angle = 360 - angle
-
                 limb_angles.append(angle)
             except (IndexError, ZeroDivisionError):
                 # fallback if zero division error
@@ -130,7 +130,8 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
                     ref_frames: List[np.ndarray],
                     comp_frames: List[np.ndarray],
                     ref_pose_results: List,
-                    comp_pose_results: List) -> float:
+                    comp_pose_results: List,
+                    output_dir: str) -> float:
     """Compares two dancers and returns a synchronization score."""
     # get number of comparable frames
     num_frames = min(len(ref_landmarks), len(comp_landmarks))
@@ -143,12 +144,21 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
     score = 100.0
 
     print("Analysing dancers...")
-    video_writer = cv2.VideoWriter(f'{OUTPUT_DIR}/output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), FPS, (2 * 720, 1280))
+
+    # create a temp display to get dimensions of the output
+    ref_frame = ref_frames[0]
+    comp_frame = comp_frames[0]
+    display = np.concatenate((ref_frame, comp_frame), axis=1)
+    height, width = display.shape[:2]
+    
+    output_path = f'{output_dir}/output.mp4'
+    video_writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), FPS, (width, height))
+
 
     for frame_idx in range(num_frames):
         # difference in angle for each limb
-        frame_diffs = [abs(ref_angles[frame_idx][j] - comp_angles[frame_idx][j]) / 180 for j in
-                       range(len(LIMB_CONNECTIONS))]
+        frame_diffs = [angular_difference(ref_angles[frame_idx][j], comp_angles[frame_idx][j]) / 180 
+                       for j in range(len(LIMB_CONNECTIONS))]
         frame_diff = mean(frame_diffs)
 
         ref_frame = ref_frames[frame_idx]
@@ -169,21 +179,21 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
             out_of_sync_frames += 1
 
         score = ((frame_idx + 1 - out_of_sync_frames) / (frame_idx + 1)) * 100.0
-        cv2.putText(display, f"Score: {score:.2f}%", (ref_frame.shape[1] + 40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color,
-                    3)
+        cv2.putText(display, f"Score: {score:.2f}%", (ref_frame.shape[1] + 40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
 
-        cv2.imshow(str(frame_idx), display)
+        # uncomment if you want to show the frames being compared as the program runs
+        # cv2.imshow(str(frame_idx), display)
         video_writer.write(display)
-        cv2.waitKey(1)
+        # cv2.waitKey(1)
 
     video_writer.release()
     return score
 
 
-def convert_to_same_framerate(clip: str) -> str:
+def convert_to_same_framerate(clip: str, output_dir: str) -> str:
     """Converts a video clip to 24 fps and returns the path to the converted clip."""
     clip_name = os.path.splitext(os.path.basename(clip))[0]
-    clip_24 = f"{OUTPUT_DIR}/{clip_name}_24.mov"
+    clip_24 = f"{output_dir}/{clip_name}_24.mov"
     os.system(f"ffmpeg {EXIST_FLAG} -i {clip} -filter:v fps={FPS} {clip_24}")
     return clip_24
 
@@ -196,10 +206,10 @@ def validate_reference_clip(ref_clip: str, comparison_clip: str):
         raise ValueError(f"Reference clip {ref_clip} must be longer than comparison clip {comparison_clip}")
 
 
-def convert_to_wav(clip: str) -> str:
+def convert_to_wav(clip: str, output_dir: str) -> str:
     """Converts a video clip to WAV format and returns the path to the WAV file."""
     clip_name = os.path.splitext(os.path.basename(clip))[0]
-    clip_wav = f"{OUTPUT_DIR}/{clip_name}.wav"
+    clip_wav = f"{output_dir}/{clip_name}.wav"
     os.system(f"ffmpeg {EXIST_FLAG} -i {clip} {clip_wav}")
     return clip_wav
 
@@ -213,15 +223,15 @@ def find_sound_offset(ref_wav: str, comparison_wav: str) -> float:
     return abs(float(str(offset)[2:-3]))
 
 
-def trim_clips(ref_clip: str, comparison_clip: str, offset: float) -> Tuple[str, str]:
+def trim_clips(ref_clip: str, comparison_clip: str, offset: float, output_dir: str) -> Tuple[str, str]:
     """Trims both clips to the same duration based on the calculated offset."""
     duration = get_video_duration(comparison_clip)
 
     ref_name = os.path.splitext(os.path.basename(ref_clip))[0]
     comp_name = os.path.splitext(os.path.basename(comparison_clip))[0]
 
-    ref_cut = f"{OUTPUT_DIR}/{ref_name}_cut.mov"
-    comp_cut = f"{OUTPUT_DIR}/{comp_name}_cut.mov"
+    ref_cut = f"{output_dir}/{ref_name}_cut.mov"
+    comp_cut = f"{output_dir}/{comp_name}_cut.mov"
 
     os.system(f"ffmpeg {EXIST_FLAG} -i {ref_clip} -ss {offset} -t {duration} {ref_cut}")
     os.system(f"ffmpeg {EXIST_FLAG} -i {comparison_clip} -ss 0 -t {duration} {comp_cut}")
@@ -229,24 +239,26 @@ def trim_clips(ref_clip: str, comparison_clip: str, offset: float) -> Tuple[str,
     return ref_cut, comp_cut
 
 
-def main(ref_clip: str, comparison_clip: str, compare_only: bool = False):
+def main(ref_clip: str, comparison_clip: str, compare_only: bool = False, output_dir: str = "output"):
+
+    output_dir = os.path.abspath(output_dir)
     # ensure output directory exists
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
 
     if not compare_only:
-        ref_clip_24 = convert_to_same_framerate(ref_clip)
-        comp_clip_24 = convert_to_same_framerate(comparison_clip)
+        ref_clip_24 = convert_to_same_framerate(ref_clip, output_dir)
+        comp_clip_24 = convert_to_same_framerate(comparison_clip, output_dir)
 
 
         validate_reference_clip(ref_clip, comparison_clip)
 
-        ref_wav = convert_to_wav(ref_clip)
-        comp_wav = convert_to_wav(comparison_clip)
+        ref_wav = convert_to_wav(ref_clip, output_dir)
+        comp_wav = convert_to_wav(comparison_clip, output_dir)
 
         offset = find_sound_offset(ref_wav, comp_wav)
 
         # trip clips so aligned based on detected offset
-        ref_cut, comp_cut = trim_clips(ref_clip_24, comp_clip_24, offset)
+        ref_cut, comp_cut = trim_clips(ref_clip_24, comp_clip_24, offset, output_dir)
     else:
         # if `compare_only` is True -> clips already trimmed and synchronised
         ref_cut, comp_cut = ref_clip, comparison_clip
@@ -258,22 +270,28 @@ def main(ref_clip: str, comparison_clip: str, compare_only: bool = False):
     comp_landmarks, comp_frames, comp_pose_results = extract_landmarks(comp_cut)
 
     # compare
-    score = compare_dancers(ref_landmarks, comp_landmarks, ref_frames, comp_frames, ref_pose_results, comp_pose_results)
+    score = compare_dancers(ref_landmarks, comp_landmarks, ref_frames, comp_frames, ref_pose_results, comp_pose_results, output_dir)
 
     print(f"\nYou are {score:.2f}% in sync with your model dancer!")
 
 
 if __name__ == "__main__":
-    import sys
-
     # correct number of args provided?
     if len(sys.argv) < 3:
-        print(f"Usage:\n {sys.argv[0]} <ref_clip> <comparison_clip> [--compare-only]")
+        print(f"Usage:\n {sys.argv[0]} <ref_clip> <comparison_clip> [--compare-only] [--output-dir OUTPUT_DIR]")
         sys.exit(-1)
 
     # parsing the arguments
     ref_clip = sys.argv[1]
     comparison_clip = sys.argv[2]
-    compare_only = len(sys.argv) > 3 and sys.argv[3] == '--compare-only'
+    compare_only = False
+    output_dir = "output"  # default
+    
+    # check for optional arguments
+    for i in range(3, len(sys.argv)):
+        if sys.argv[i] == '--compare-only':
+            compare_only = True
+        elif sys.argv[i] == '--output-dir' and i + 1 < len(sys.argv):
+            output_dir = sys.argv[i + 1]
 
-    main(ref_clip, comparison_clip, compare_only)
+    main(ref_clip, comparison_clip, compare_only, output_dir)

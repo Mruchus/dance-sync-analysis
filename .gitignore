@@ -1,10 +1,7 @@
 .DS_Store
-filter.py
-video.py
-timing.py
-function testing/
-trash/
-versions/
-web/
+.idea/
+.venv/
 output/
-random dance project footage/
+scraps/
+uploads/
+personal_videos/
