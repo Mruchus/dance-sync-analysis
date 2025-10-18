@@ -5,6 +5,15 @@ from enum import Enum
 from statistics import mean
 from typing import List, Tuple
 
+from datetime import datetime
+
+from together import Together
+
+from composio_crewai import App, ComposioToolSet
+from crewai import Agent, Task, Crew
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -20,6 +29,9 @@ SYNC_THRESHOLD = 0.15 # would allow for 180 * 0.15 = 27 degrees off
 mp_draw = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
+# Initialize variables to keep track of the highest average difference and corresponding limb
+max_diff = None #-float('inf')
+max_limb = None
 
 class PoseLandmark(Enum):
     NOSE = 0
@@ -50,6 +62,46 @@ LIMB_CONNECTIONS = [
     (PoseLandmark.RIGHT_SHOULDER, PoseLandmark.RIGHT_HIP),
 ]
 
+
+# Create and Execute Agent.
+def followup_event():
+
+    # Initialize the language model
+    llm = ChatOpenAI(model="gpt-4o")
+
+    # Define tools for the agents
+    # We are using Google calendar tool from composio to connect to our calendar account.
+    composio_toolset = ComposioToolSet()
+    tools = composio_toolset.get_tools(apps=[App.GOOGLECALENDAR])
+
+    # Retrieve the current date and time
+    date = datetime.today().strftime("%Y-%m-%d+1")
+    timezone = datetime.now().astimezone().tzinfo
+
+    # Setup Todo
+    followup = """
+    6PM - 7PM -> Meeting for dance recital followup,
+    10:30PM - 11PM -> Dance Practice
+    """
+    calendar_agent = Agent(
+        role="Google Calendar Agent",
+        goal="""You take action on Google Calendar using Google Calendar APIs""",
+        backstory="""You are an AI agent responsible for taking actions on Google Calendar on users' behalf. 
+        You need to take action on Calendar using Google Calendar APIs. Use correct tools to run APIs from the given tool-set.""",
+        verbose=True,
+        tools=tools,
+        llm=llm,
+        cache=False,
+    )
+    task = Task(
+        description=f"Book slots according to {followup}. Label them with the work provided to be done in that time period. Schedule it for today. Today's date is {date} (it's in YYYY-MM-DD format) and make the timezone be {timezone}.",
+        agent=calendar_agent,
+        expected_output="if free slot is found",
+    )
+    crew = Crew(agents=[calendar_agent], tasks=[task])
+    result = crew.kickoff()
+    print(result)
+    return "Crew run initiated", 200
 
 def get_video_duration(filename: str) -> float:
     """Returns the duration of a video clip in seconds."""
@@ -92,6 +144,19 @@ def extract_landmarks(video_path: str) -> Tuple[List[List[Tuple[float, float]]],
 
     return xy_landmark_coords, frames, landmarks
 
+def generate_feedback_summary(ref_angles: List[List[float]], comp_angles: List[List[float]]):
+    """Generates a summary of feedback on limb angles for all frames."""
+    feedback_summary = {}
+    num_frames = len(ref_angles)
+    
+    for limb_idx, (start, end) in enumerate(LIMB_CONNECTIONS):
+        diffs = [abs(ref_angles[frame_idx][limb_idx] - comp_angles[frame_idx][limb_idx]) 
+                 for frame_idx in range(num_frames)]
+        avg_diff = mean(diffs)
+        feedback_summary[f"Limb {start.name} to {end.name}"] = avg_diff
+
+    return feedback_summary
+
 
 def calculate_limb_angles(frame_landmarks: List[List[Tuple[float, float]]]) -> List[List[float]]:
     """Calculates limb angles for each frame."""
@@ -132,6 +197,10 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
                     ref_pose_results: List,
                     comp_pose_results: List) -> float:
     """Compares two dancers and returns a synchronization score."""
+
+    #global variables
+
+    global max_diff, max_limb
     # get number of comparable frames
     num_frames = min(len(ref_landmarks), len(comp_landmarks))
 
@@ -142,42 +211,98 @@ def compare_dancers(ref_landmarks: List[List[Tuple[float, float]]],
     out_of_sync_frames = 0
     score = 100.0
 
-    print("Analysing dancers...")
+    # Dictionary to store frame indices and their average differences
+    frame_errors = {}
+
+    print("Analyzing dancers...")
     video_writer = cv2.VideoWriter(f'{OUTPUT_DIR}/output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), FPS, (2 * 720, 1280))
 
+    # Define colors to flash through
+    colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+
     for frame_idx in range(num_frames):
-        # difference in angle for each limb
-        frame_diffs = [abs(ref_angles[frame_idx][j] - comp_angles[frame_idx][j]) / 180 for j in
-                       range(len(LIMB_CONNECTIONS))]
+        frame_diffs = [abs(ref_angles[frame_idx][j] - comp_angles[frame_idx][j]) / 180 for j in range(len(LIMB_CONNECTIONS))]
         frame_diff = mean(frame_diffs)
+
+        # Store the frame index and its average difference
+        frame_errors[frame_idx] = frame_diff
 
         ref_frame = ref_frames[frame_idx]
         comp_frame = comp_frames[frame_idx]
 
-        # annotation skeleton and score on the frame
         mp_draw.draw_landmarks(ref_frame, ref_pose_results[frame_idx].pose_landmarks, mp_pose.POSE_CONNECTIONS)
         mp_draw.draw_landmarks(comp_frame, comp_pose_results[frame_idx].pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
         display = np.concatenate((ref_frame, comp_frame), axis=1)
 
         color = (0, 0, 255) if frame_diff > SYNC_THRESHOLD else (255, 0, 0)
-
         cv2.putText(display, f"Diff: {frame_diff:.2f}", (40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
 
-        # determine if synced
         if frame_diff > SYNC_THRESHOLD:
             out_of_sync_frames += 1
 
         score = ((frame_idx + 1 - out_of_sync_frames) / (frame_idx + 1)) * 100.0
-        cv2.putText(display, f"Score: {score:.2f}%", (ref_frame.shape[1] + 40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color,
-                    3)
+        cv2.putText(display, f"Score: {score:.2f}%", (ref_frame.shape[1] + 40, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
 
+        # --- Added: Center the "MindsDB Agents Hackathon LFG!!!" text and flash different colors ---
+        text = "MindsDB Agents Hackathon LFG!!!"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1.5
+        thickness = 3
+        text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+
+        # Calculate the center position
+        text_x = (display.shape[1] - text_size[0]) // 2   # x-coordinate for centering
+        text_y = (display.shape[0] * 7 // 8)  # Moves the text 50% lower
+
+
+        # Pick a color based on the frame index (modulo to cycle through colors)
+        flashing_color = colors[frame_idx % len(colors)]  # --- Change: Cycle through colors ---
+
+        # Put the text at the center of the frame with the flashing color
+        cv2.putText(display, text, (text_x, text_y), font, font_scale, flashing_color, thickness)  # --- Change: Use flashing_color ---
+
+        # Show the display and write it to the output video
         cv2.imshow(str(frame_idx), display)
         video_writer.write(display)
         cv2.waitKey(1)
 
     video_writer.release()
-    return score
+
+    # Calculate average limb difference for each 5-second window
+    frame_rate = int(FPS)
+    window_size = int(5 * frame_rate)
+    window_errors = []
+
+    for start_idx in range(0, num_frames, window_size):
+        end_idx = min(start_idx + window_size, num_frames)
+        window_diff = [frame_errors[idx] for idx in range(start_idx, end_idx)]
+        avg_window_diff = mean(window_diff)
+
+        start_time = start_idx / frame_rate
+        end_time = end_idx / frame_rate
+
+        window_errors.append((start_time, end_time, avg_window_diff))
+
+    sorted_windows = sorted(window_errors, key=lambda x: x[2], reverse=True)
+
+    print("\n5-Second Time Ranges with the Most Errors:")
+    for start_time, end_time, avg_diff in sorted_windows[:5]:
+        print(f"Range {start_time:.2f}s - {end_time:.2f}s: {avg_diff:.2f} degrees difference on average")
+
+    feedback_summary = generate_feedback_summary(ref_angles, comp_angles)
+    print("\nDetailed Feedback:")
+
+    for limb, avg_diff in feedback_summary.items():
+        print(f"{limb}: {avg_diff:.2f} degrees difference on average")
+
+        if max_diff is None or avg_diff > max_diff:
+            max_diff = avg_diff
+            max_limb = limb
+
+        
+
+    return score, max_diff, max_limb
 
 
 def convert_to_same_framerate(clip: str) -> str:
@@ -228,7 +353,6 @@ def trim_clips(ref_clip: str, comparison_clip: str, offset: float) -> Tuple[str,
 
     return ref_cut, comp_cut
 
-
 def main(ref_clip: str, comparison_clip: str, compare_only: bool = False):
     # ensure output directory exists
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -258,9 +382,54 @@ def main(ref_clip: str, comparison_clip: str, compare_only: bool = False):
     comp_landmarks, comp_frames, comp_pose_results = extract_landmarks(comp_cut)
 
     # compare
-    score = compare_dancers(ref_landmarks, comp_landmarks, ref_frames, comp_frames, ref_pose_results, comp_pose_results)
+    score, max_diff, max_limb = compare_dancers(ref_landmarks, comp_landmarks, ref_frames, comp_frames, ref_pose_results, comp_pose_results)
 
     print(f"\nYou are {score:.2f}% in sync with your model dancer!")
+
+    
+
+    if score < 60:
+            prompt = f"What are some ways to improve my dance move accuracy since I have an accuracy of {score:.2f}%? Mention the limb with the highest average difference is {max_limb} with an average difference of {max_diff:.2f} degrees. Please make sure to mention my score, my style of dance which are Boogalo and Funk, and include a brief history of each dance style."
+            # Print the values to verify they are returned correctly
+            print(f"Score: {score:.2f}")
+            print(f"Limb with highest average difference: {max_limb}")
+            print(f"Average difference for the limb: {max_diff:.2f}")
+            print(prompt)
+            # Call AI agent to add followup dance practice events to improve
+            followup_event()
+            client = Together(api_key=os.environ.get("34433f9db54ef4d633660b7961f354a8e6a6ee1094d366dad96c16ffe8558cd0"))
+            # Create a streaming completion request
+            stream = client.chat.completions.create(
+                model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+                messages=[{"role": "user", "content": prompt}],
+                stream=True,
+            )
+
+            for chunk in stream:
+                print(chunk.choices[0].delta.content or "", end="", flush=True)
+
+    else:
+            prompt = f"Say congratulations and we are ready to start promoting your video, mention the score {score:.2f}%? Mention the limb with the highest average difference is {max_limb} with an average difference of {max_diff:.2f} degrees. Please make sure to mention my score, my style of dance which are Boogalo and Funk, and include a brief history of each dance style. you could also try a similar dance style like waving next. You could try roboting as well. Mention all this."
+            print(f"Score: {score:.2f}")
+            print(f"Limb with highest average difference: {max_limb}")
+            print(f"Average difference for the limb: {max_diff:.2f}")
+            print(f"Great job at being above 60%")
+            print(prompt)
+            # Call AI agent to add followup dance practice events to improve
+            followup_event()
+            client = Together(api_key=os.environ.get("34433f9db54ef4d633660b7961f354a8e6a6ee1094d366dad96c16ffe8558cd0"))
+            # Create a streaming completion request
+            stream = client.chat.completions.create(
+                model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+                messages=[{"role": "user", "content": prompt}],
+                stream=True,
+            )
+
+            for chunk in stream:
+                print(chunk.choices[0].delta.content or "", end="", flush=True)
+
+
+
 
 
 if __name__ == "__main__":
@@ -277,3 +446,5 @@ if __name__ == "__main__":
     compare_only = len(sys.argv) > 3 and sys.argv[3] == '--compare-only'
 
     main(ref_clip, comparison_clip, compare_only)
+
+
