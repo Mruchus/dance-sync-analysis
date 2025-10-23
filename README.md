@@ -55,6 +55,11 @@ Now available as a web interface:
 
 ![](https://github.com/Mruchus/dance-sync-analysis/blob/main/web_interface.png)
 
+Moblie Version:
+
+<img src="https://github.com/Mruchus/dance-sync-analysis/blob/main/web_mobile.png" width="400">
+
+
 ## Want to try it out?
 
 I am working on making this accessible for everyone: **non-programmers included!** Unfortunately, I'm not quite there yet so you will need to install a bunch of packages (sorry!) and run the code on **macOS 12.5.1**. <br />
